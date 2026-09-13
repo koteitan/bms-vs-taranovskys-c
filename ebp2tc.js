@@ -13,7 +13,7 @@ const { ONE, P, terms, mk, nat, natValue, cmp, succ, pred, splitHigh, logP } = E
 
 const tcmp = B.cmp;
 // 実験用の規則スイッチ（tools/ebp_lab.js が書き換える）
-const RULES = { R2p: false, R2s: false, R2c: false, R2e: false, R2u: false, R2z: false, R2n: true, R2h: false, R1d: true, R2g: true, R2x: true, R2k: true, CnAll: true };
+const RULES = { R2p: false, R2s: false, R2c: false, R2e: false, R2u: false, R2z: false, R2n: true, R2h: false, R1d: true, R2g: true, R2x: true, R2k: true, CnAll: true, R2nu: false };
 
 // R2x（実験）: q = ψ_μ(b) で b の項がすべて添字 > μ・2 項以上、最後の項 q2 の段 m が後続で m ≥ μ+2 のとき、
 //   log q = ι(q) = C(ι(b), Ω̂_μ) の ι(b) で、q2 について E = ψ̂_{m-1}(b) の置き換え（R1d と同じ）をしたもの。
@@ -335,6 +335,17 @@ function iota(t) {
     const k = mm1 !== null ? mm1 : ONE;
     return C(C(iota(P(k, a)), iota(aprime)), Z);
   }
+  // R2nu（実験）: ψ_ν(α' + ψ_μ(b))（ν ≥ 1、μ は超限の後続、μ-1 > ν）でも R2n と同じく
+  //   最後の項の指数を E = ψ̂_{μ-1}(a) に置き換える（有限の μ は 2 行で検証済みの和の規則のまま）
+  if (RULES.R2nu && nu !== 0 && aprime !== 0 && natValue(mu) === null) {
+    const mpn = pred(mu);
+    if (mpn !== null && cmp(mpn, nu) > 0) {
+      const En = iota(P(mpn, a));
+      if (b === 0) return C(Cn(En, iota(aprime)), baseOf(nu));
+      const exg = expRP(last, mu, En);
+      if (exg !== null) return C(Cn(exg, iota(aprime)), baseOf(nu));
+    }
+  }
   return C(iota(a), baseOf(nu));
 }
 
@@ -379,7 +390,7 @@ function translateLabel(label, opts) {
   return { term: t, tc: B.tcToString(iota(t), opts.omega !== false) };
 }
 
-const api = { RULES, omegaHat, iota, expT, chain, fixLabel, translateLabel };
+const api = { RULES, omegaHat, iota, expT, chain, fixLabel, translateLabel, C, Z, Cn, expRP };
 if (isNode) module.exports = api;
 else root.Ebp2tc = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
