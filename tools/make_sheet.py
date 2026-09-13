@@ -55,6 +55,10 @@ json.dump(tcmap, open(os.path.join(SHEET, 'tc_map.json'), 'w'), indent=1, ensure
 STATUS_JA = {'verified': '検証済', 'rule': '規則(未検証)', 'ocf': '表記経由', 'ocf-flagged': '表記経由(指摘あり)', 'untranslated': '未翻訳'}
 STATUS_EN = {'verified': 'verified', 'rule': 'rule (unverified)', 'ocf': 'via label', 'ocf-flagged': 'via label (flagged)', 'untranslated': 'untranslated'}
 
+# 表の UNOCF 列: psi を p と略し、* と _ が斜体にならないようコードにする
+def lab(name):
+    return f'`{name.replace("psi", "p")}`' if name else ''
+
 # ---- 全行 TSV
 with open(os.path.join(SHEET, 'table.tsv'), 'w') as f:
     f.write('index\tsheet\tBMS\tUNOCF\tTC\tstatus\n')
@@ -75,7 +79,7 @@ def build(lang):
         L += ['# BMS vs Taranovsky\'s C 対応表', '',
               '[← Back](../README.md) | [English](README-en.md) | [Japanese](README.md)', '',
               'BM4-Analysis シートの BMS 列に対応する Taranovsky\'s C（main system, 結合系）の項。',
-              '記法: `C(a,b)`, `0`, `Ω_1`, `Ω_2`（論文の Ω_n）。`#` は原表の通し番号。', '',
+              '記法: `C(a,b)`, `0`, `Ω_1`, `Ω_2`（論文の Ω_n）。`#` は原表の通し番号。UNOCF 列は原表の表記で、`psi` を `p` と略す。', '',
               '状態:', '',
               '- **検証済**: `tools/pss_tc.py` の機械検査（標準形、順序保存、展開列 M[n] (n ≤ 12) との共終性）を通過。',
               '- **規則(未検証)**: 翻訳規則は適用できるが機械検査に落ちた行（`note` に失敗の種別）。',
@@ -89,7 +93,7 @@ def build(lang):
         L += ['# BMS vs Taranovsky\'s C correspondence table', '',
               '[← Back](../README-en.md) | [English](README-en.md) | [Japanese](README.md)', '',
               'Taranovsky\'s C (main system, combined) terms for the BMS column of the BM4-Analysis sheet.',
-              'Notation: `C(a,b)`, `0`, `Ω_1`, `Ω_2` (the paper\'s Ω_n). `#` is the row number in the original sheet.', '',
+              'Notation: `C(a,b)`, `0`, `Ω_1`, `Ω_2` (the paper\'s Ω_n). `#` is the row number in the original sheet. The UNOCF column is the sheet\'s label with `psi` shortened to `p`.', '',
               'Status:', '',
               '- **verified**: passed the machine checks in `tools/pss_tc.py` (standard form, order preservation, cofinality with the expansions M[n], n ≤ 12).',
               '- **rule (unverified)**: the rule applies but the machine check failed (`note` gives the kind of failure).',
@@ -119,7 +123,7 @@ def build(lang):
     for i, (sheet, b, name) in enumerate(rows):
         e = tcmap[b]
         if e['status'] == 'untranslated' or nrows(b) > 2: continue
-        L.append(f'| {i} | {sheet} | `{b}` | {name} | `{pretty(e["tc"])}` | {S[e["status"]]} | {e["note"]} |')
+        L.append(f'| {i} | {sheet} | `{b}` | {lab(name)} | `{pretty(e["tc"])}` | {S[e["status"]]} | {e["note"]} |')
     return '\n'.join(L) + '\n'
 
 # 3 行の行は GitHub の表示上限（1 MB）を超えないよう約 1000 行ずつ別ページ（日英併記）にする
@@ -133,12 +137,13 @@ for k, j in enumerate(range(0, len(rows3), PAGE), 1):
     P = ['# BMS vs Taranovsky\'s C: 3-row rows ' + f'{k}/{len(pages3)}', '',
          '[← Back](README.md) | [English](README-en.md) | [Japanese](README.md)', '',
          '状態 / status: ' + ', '.join(f'{STATUS_JA[s]} = {STATUS_EN[s]}' for s in ('ocf', 'ocf-flagged')), '',
+         'UNOCF: 原表の表記で `psi` を `p` と略す / the sheet\'s label with `psi` shortened to `p`', '',
          '| # | BMS | UNOCF | Taranovsky\'s C | 状態 / status | note |',
          '|---|---|---|---|---|---|']
     for i in rows3[j:j + PAGE]:
         _, b, name = rows[i]
         e = tcmap[b]
-        P.append(f'| {i} | `{b}` | {name} | `{pretty(e["tc"])}` | {STATUS_EN[e["status"]]} | {e["note"]} |')
+        P.append(f'| {i} | `{b}` | {lab(name)} | `{pretty(e["tc"])}` | {STATUS_EN[e["status"]]} | {e["note"]} |')
     open(os.path.join(SHEET, f'rows3-{k}.md'), 'w').write('\n'.join(P) + '\n')
 
 open(os.path.join(SHEET, 'README.md'), 'w').write(build('ja'))

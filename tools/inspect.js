@@ -23,6 +23,8 @@ const batch = lines => {
   const out = spawnSync(CLI, ['batch'], { input: lines.join('\n') + '\n', encoding: 'utf8', maxBuffer: 1 << 30 }).stdout.split('\n');
   return lines.map((_, i) => (out[i] || '').trim());
 };
+// 表の表記: psi を p と略し、* と _ が斜体にならないようコードにする
+const lab = s => `\`${s.replace(/psi/g, 'p')}\``;
 
 const all = JSON.parse(fs.readFileSync(path.join(ROOT, 'sheet/bms_rows.json'), 'utf8'));
 const rows = [];
@@ -99,7 +101,8 @@ for (const r of rows) { if (!ok(r.tc)) r.tc = undefined; if (r.ap && !r.ap.every
 const lines = [];
 lines.push('# 数値検証の結果', '');
 lines.push('原表（BM4-Analysis の "To psi(I)"、`sheet/bms_rows.json`）の行 M ごとに、翻訳 f(M) を機械で検査した結果です。');
-lines.push('証明ではなく、原表にある有限個の行での検査です。`node tools/inspect.js` で作り直せます。', '');
+lines.push('証明ではなく、原表にある有限個の行での検査です。`node tools/inspect.js` で作り直せます。');
+lines.push('表記は原表のもので、`psi` を `p` と略します。', '');
 lines.push('## エラー数', '');
 lines.push('「エラー数 / 検査した数」。区間は原表の並び（BMS の順序）で、その順序数の行より前の行すべてです（累積）。', '');
 lines.push('|大きさ|標準形|順序（隣の行）|近似列 < f(M)|上限 = f(M)|上限を確かめられない|翻訳なし|');
@@ -137,7 +140,7 @@ lines.push('|行|BMS|表記|内容|');
 lines.push('|---|---|---|---|');
 for (const r of bad) {
   const what = [!r.std ? '非標準' : '', r.ap && !r.below ? '近似列が下にない' : '', r.ap && r.apStd && r.sup !== r.tc ? '上限が不一致' : ''].filter(Boolean).join('、');
-  lines.push(`|${r.idx}|\`${r.b.length > 60 ? r.b.slice(0, 57) + '...' : r.b}\`|${r.label}|${what}|`);
+  lines.push(`|${r.idx}|\`${r.b.length > 60 ? r.b.slice(0, 57) + '...' : r.b}\`|${lab(r.label)}|${what}|`);
 }
 lines.push('');
 // 順序のエラー: 原表の表記どうし（拡張 Buchholz ψ）でも順序が逆か
@@ -154,6 +157,6 @@ lines.push(`${ordBad.length} 組のうち ${rev} 組は、原表の表記どう�
 lines.push('これらは翻訳ではなく、原表の表記と BMS の並びが食い違っている組です。', '');
 lines.push('|行|表記|次の行の表記|表記の順序も逆|');
 lines.push('|---|---|---|---|');
-for (const o of ordBad) lines.push(`|${o.r.idx}|${o.r.label}|${o.nx.label}|${o.labelRev === null ? '-' : o.labelRev ? 'はい' : 'いいえ'}|`);
+for (const o of ordBad) lines.push(`|${o.r.idx}|${lab(o.r.label)}|${lab(o.nx.label)}|${o.labelRev === null ? '-' : o.labelRev ? 'はい' : 'いいえ'}|`);
 fs.writeFileSync(path.join(ROOT, 'sampling.md'), lines.join('\n') + '\n');
 process.stdout.write(lines.slice(0, 14).join('\n') + '\n');
