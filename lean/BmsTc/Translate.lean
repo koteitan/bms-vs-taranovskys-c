@@ -28,7 +28,12 @@ Buchholz 項 → TC 項の規則 (tools/pss_tc.py と同一; 機械検査済み�
     a_high ≠ 0, β ≠ 0:            P = ι(D_ν a_high);  C(chain(β, P), P)
     a_high = a' ++ [D_{ν+1} b]:   Cn(deg, ι(D_ν a') or base_ν),
                                   deg = chain(b, Ω̂_{ν+1}) (b < Ω_{ν+2}) / ι(b) (else)
-    a_high = a' ++ [D_μ b], μ ≥ ν+2, ν = 0, a' ≠ 0:  C(C(ι(D_1 a), ι(a')), 0)     (R2)
+    a_high = a' ++ [D_μ b], μ ≥ ν+2, ν = 0, a' ≠ 0:                            (R2n)
+      E = ψ̂_{μ-1}(a) として
+        b = 0                  → C(Cn(E, ι(a')), 0)
+        それ以外               → C(C(ex, ι(a')), 0)、ex = log ψ_μ(b) の「最後の段 μ の項を
+                                 たどった先の指数」を E に置き換えたもの（たどれなければ C(ι(a), 0)）
+      （b = b_high ++ β なら log ψ_μ(b) = chain(β, ι(D_μ b_high))、b_high = 0 なら chain(b, Ω̂_μ)）
     その他:                        C(ι(a), base_ν)
   base_0 = 0, base_ν = Ω̂_ν.  Cn(x, b) は b = C(c,d), x > c の間 b := d と縮める。
 -/
@@ -96,6 +101,16 @@ def splitHigh (a : BT) (nu : Nat) : BT × BT :=
   (mkSum (ts.filter fun q => nuOf q > nu), mkSum (ts.filter fun q => nuOf q ≤ nu))
 
 open Buchholz in
+/-- 和 x + y（x の末尾の y の先頭より小さい項を吸収）。 -/
+def addBT (x y : BT) : BT :=
+  let ys := termsOf y
+  match ys with
+  | [] => x
+  | y0 :: _ =>
+    let xs := (termsOf x).reverse.dropWhile (fun p => lessThan p y0) |>.reverse
+    mkSum (xs ++ ys)
+
+open Buchholz in
 mutual
   /-- log_ω ι(p) の TC 項。 -/
   partial def expT (p : BT) : T :=
@@ -123,6 +138,22 @@ mutual
       if muI != (nu : Int) then none
       else
         let init := chain (mkSum ts.dropLast) (omegaHat nu)
+        if b == .zero then some (.C e init)
+        else
+          let (h, _) := splitHigh b nu
+          if h != .zero then none
+          else (chainRP b nu e).map fun e' => .C e' init
+    | _ => none
+
+  /-- `chainRP` の基点を指定できる版: chain(a, base) の最後の段 ν の項をたどった先の
+  ψ_ν(0) の指数を `e` に置き換える（途中の ψ_ν(c) の中では基点 Ω̂_ν）。 -/
+  partial def chainRPBase (a : BT) (nu : Nat) (e base : T) : Option T :=
+    let ts := termsOf a
+    match ts.getLast? with
+    | some (.D muI b) =>
+      if muI != (nu : Int) then none
+      else
+        let init := chain (mkSum ts.dropLast) base
         if b == .zero then some (.C e init)
         else
           let (h, _) := splitHigh b nu
@@ -166,8 +197,18 @@ mutual
               let base := if aprime != .zero then iota (.D nuI aprime) else baseOf nu
               Cn degree base
             else if nu == 0 && aprime != .zero then
-              -- R2: ψ_0(α'+q) = C(val(α') + ψ̂_1(α), 0)
-              .C (.C (iota (.D 1 a)) (iota aprime)) .zero
+              -- R2n: ψ_0(α' + ψ_μ(b)), μ ≥ 2。E = ψ̂_{μ-1}(a)
+              let en := iota (.D ((mu : Int) - 1) a)
+              if b == .zero then .C (Cn en (iota aprime)) .zero
+              else
+                let (hq, lq) := splitHigh b mu
+                let ex : Option T :=
+                  if hq == .zero then chainRPBase b mu en (omegaHat mu)
+                  else if lq != .zero then chainRPBase lq mu en (iota (.D (mu : Int) hq))
+                  else none
+                match ex with
+                | some e => .C (.C e (iota aprime)) .zero
+                | none => .C (iota a) .zero
             else
               .C (iota a) (baseOf nu)
           | _ => .zero

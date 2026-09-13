@@ -469,7 +469,7 @@ function splitHigh(a, nu) {
 }
 
 // 規則スイッチ（tools/rule_lab.js が書き換える）。N2 は採用済み（Lean / Python と同じ）、他は実験中。
-const RULES = { N1: false, N1exp: false, N2: true, N2exp: false, R2p: false };
+const RULES = { N1: false, N1exp: false, N2: true, N2exp: false, R2p: false, R2s: false, R2e: false, R2u: false, R2z: false, R2n: true, R2h: false, R1d: false };
 
 // N2: ν ≥ 2、a の項がすべて高さ ≤ ν のとき、Ω̂_ν + a = chain(a, Ω̂_ν) の「最後の項を高さ ν のまま
 // たどった先の ψ_ν(0) の指数 Ω̂_ν」を E に置き換える。たどれなければ null。
@@ -555,15 +555,148 @@ function iota(t) {
   const mu = last.nu, b = last.a;
   if (mu === nu + 1) {
     const [bh] = splitHigh(b, nu + 1);
-    const degree = bh === 0 ? chain(b, omegaHat(nu + 1)) : iota(b);
+    let degree = bh === 0 ? chain(b, omegaHat(nu + 1)) : iota(b);
+    // R1d（実験）: ebp2tc.js の R1d と同じ
+    if (RULES.R1d && nu === 0 && bh !== 0) {
+      const bts = termsOf(b);
+      const q2 = bts[bts.length - 1];
+      if (bts.length >= 2 && isObj(q2) && q2.nu >= 2) {
+        const m2 = q2.nu;
+        const binit = mkSum(bts.slice(0, -1));
+        const E2 = iota(D(m2 - 1, b));
+        if (q2.a === 0) degree = Cn(E2, iota(binit));
+        else {
+          const [h2, l2] = splitHigh(q2.a, m2);
+          let ex2 = null;
+          if (h2 === 0) ex2 = chainRPBase(q2.a, m2, E2, omegaHat(m2));
+          else if (l2 !== 0) ex2 = chainRPBase(l2, m2, E2, iota(D(m2, h2)));
+          if (ex2) degree = C(ex2, iota(binit));
+        }
+      }
+    }
     const base = aprime !== 0 ? iota(D(nu, aprime)) : baseOf(nu);
     return Cn(degree, base);
   }
   if (nu === 0 && aprime !== 0) {
+    // R2n（実験）: ebp2tc.js の R2n と同じ（段は有限）
+    if (RULES.R2n) {
+      const En = iota(D(mu - 1, a));
+      if (b === 0) return C(Cn(En, iota(aprime)), Z);
+      const [hq, lq] = splitHigh(b, mu);
+      let ex = null;
+      if (hq === 0) ex = chainRPBase(b, mu, En, omegaHat(mu));
+      else if (lq !== 0) ex = chainRPBase(lq, mu, En, iota(D(mu, hq)));
+      else if (RULES.R2h) {
+        // R2h（実験）: ebp2tc.js の R2h と同じ（b が添字 λ > μ の主項 1 個）
+        const hts = termsOf(hq);
+        if (hts.length === 1 && isObj(hts[0]) && hts[0].a !== 0) {
+          const lam = hts[0].nu, c = hts[0].a;
+          const [hc, lc] = splitHigh(c, lam);
+          if (lam === mu + 1) {
+            if (hc === 0) {
+              const r = chainRPBase(c, mu, En, omegaHat(lam));
+              if (r) ex = Cn(r, omegaHat(mu));
+            }
+          } else {
+            let inner = null;
+            if (hc === 0) {
+              const r = chainRPBase(c, mu, En, omegaHat(lam));
+              if (r) inner = C(r, omegaHat(lam));
+            } else if (lc !== 0) {
+              const Pl = iota(D(lam, hc));
+              const r = chainRPBase(lc, mu, En, Pl);
+              if (r) inner = C(r, Pl);
+            }
+            if (inner) ex = C(inner, omegaHat(mu));
+          }
+        }
+      }
+      if (ex === null) return C(iota(a), Z);
+      return C(C(ex, iota(aprime)), Z);
+    }
+    // R2z（実験）: 最後の項が素の Ω_μ（b = 0）のときだけ ψ̂_{μ-1}(a) に潰し、他は和の規則
+    if (RULES.R2z) {
+      if (b !== 0) return C(iota(a), Z);
+      return C(Cn(iota(D(mu - 1, a)), iota(aprime)), Z);
+    }
+    // R2u（実験）: ebp2tc.js の R2u と同じ（段は有限）
+    if (RULES.R2u) {
+      const bts0 = termsOf(b);
+      const lastB = bts0[bts0.length - 1];
+      if (bts0.length && isObj(lastB) && lastB.nu === 0 && lastB.a === 0) return C(iota(a), Z);
+      const [hb, lb] = splitHigh(b, mu);
+      const lts = termsOf(lb);
+      const lhi = mkSum(lts.filter(q => nuOf(q) === mu));
+      const llo = mkSum(lts.filter(q => nuOf(q) < mu));
+      const collapse = () => iota(D(mu - 1, a));
+      const base = iota(aprime);
+      let ex;
+      if (lb !== 0 && beq(hb, aprime) && llo === 0) ex = iotaCtx(lhi, aprime, mu);
+      else if (lb !== 0 && beq(hb, aprime) && lhi !== 0) ex = C(collapse(), iotaCtx(lhi, aprime, mu));
+      else ex = collapse();
+      return C(Cn(ex, base), Z);
+    }
+    // R2s（実験）: 最後の項 ψ_μ(b) の b が後続（最後の項が 1）なら潰さない（和の規則）
+    const bts = termsOf(b);
+    if (RULES.R2s && bts.length && isObj(bts[bts.length - 1]) && bts[bts.length - 1].nu === 0 && bts[bts.length - 1].a === 0) {
+      return C(iota(a), Z);
+    }
+    // R2e（実験）: b = α' + l（l は段 μ の項で終わる）なら指数を ι(l) にする
+    if (RULES.R2e) {
+      const [hb, lb] = splitHigh(b, mu);
+      const lts = termsOf(lb);
+      if (lts.length && isObj(lts[lts.length - 1]) && lts[lts.length - 1].nu === mu && beq(hb, aprime)) {
+        return C(C(iota(lb), iota(aprime)), Z);
+      }
+    }
     // R2: 最後の項（段 μ ≥ 2）の指数を ψ̂_1(a) にする。R2p（実験）: ψ̂_{μ-1}(a)
     return C(C(iota(D(RULES.R2p ? mu - 1 : 1, a)), iota(aprime)), Z);
   }
   return C(iota(a), baseOf(nu));
+}
+
+// R2n 用: chainRP の基点を指定できる版（ebp2tc.js と同じ）
+function chainRPBase(a, nu, e, base) {
+  const ts = termsOf(a);
+  if (ts.length === 0) return null;
+  const last = ts[ts.length - 1];
+  if (!isObj(last) || last.nu !== nu) return null;
+  const init = chain(mkSum(ts.slice(0, -1)), base);
+  let e2;
+  if (last.a === 0) e2 = e;
+  else {
+    const [h] = splitHigh(last.a, nu);
+    if (h !== 0) return null;
+    e2 = chainRP(last.a, nu, e);
+    if (e2 === null) return null;
+  }
+  return C(e2, init);
+}
+
+// R2u 用: 文脈 α' のもとでの ι(l)（ebp2tc.js の iotaCtx と同じ）
+function addBT(x, y) {
+  const xs = termsOf(x).slice(), ys = termsOf(y);
+  if (ys.length === 0) return x;
+  const cmpBT = (p, q) => (lessThan(p, q) ? -1 : (beq(p, q) ? 0 : 1));
+  while (xs.length && cmpBT(xs[xs.length - 1], ys[0]) < 0) xs.pop();
+  return mkSum(xs.concat(ys));
+}
+function iotaCtx(l, aprime, mu) {
+  const ts = termsOf(l);
+  if (mu < 2) return iota(l);
+  const Ectx = Cn(iota(addBT(aprime, l)), omegaHat(mu - 1));
+  if (ts.length === 1 && ts[0].a !== 0) {
+    const c = ts[0].a;
+    const [h] = splitHigh(c, mu);
+    if (h === 0) {
+      const lc = chainRP(c, mu, Ectx);
+      if (lc) return C(lc, omegaHat(mu));
+    }
+  } else if (ts.length >= 2 && ts[0].a === 0 && ts[0].nu === mu) {
+    const lc = chainRP(mkSum(ts.slice(1)), mu, Ectx);
+    if (lc) return lc;
+  }
+  return iota(l);
 }
 
 // ---------------------------------------------------------------- BMS 入口

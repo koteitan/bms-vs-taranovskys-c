@@ -23,6 +23,12 @@ const nrows = b => (b.startsWith('(') ? b.split(')')[0].split(',').length : 0);
 const out = {};
 for (const [sheet, b, u] of rows) {
   if (nrows(b) !== 3 || out[b]) continue;
+  if (X.fixLabel(u) === 'psi(I)') {
+    // ψ(I) = sup ψ_0(Ω_{Ω_{…}})。Ω̂_{ω^e} = C(Ω_2 + e, 0) の不動点（e = Ω_2）で、
+    // ψ_0(Ω_{Ω_{…Ω}}) の入れ子の像の上限探索（tools/psi_i_sup.js）と有志の解析に一致する
+    out[b] = { tc: 'C(C(C(W_2,W_2),0),0)', status: 'ocf', note: 'sup of ψ_0(Ω_{Ω_…}) (tools/psi_i_sup.js)' };
+    continue;
+  }
   let t;
   try { t = E.parseLabel(X.fixLabel(u)); } catch (e) { out[b] = { tc: '', status: 'untranslated', note: 'label not parsed' }; continue; }
   if (!E.isStd(t)) { out[b] = { tc: '', status: 'untranslated', note: 'label not in Buchholz normal form' }; continue; }

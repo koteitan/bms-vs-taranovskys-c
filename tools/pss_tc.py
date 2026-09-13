@@ -154,6 +154,23 @@ def chain_rp(a, nu, e):
     e2 = chain_rp(last[2], nu, e)
     return None if e2 is None else C(e2, init)
 
+def chain_rp_base(a, nu, e, base):
+    """chain_rp の基点を指定できる版（Translate.lean の chainRPBase と同じ）."""
+    ts = terms_of(a)
+    if not ts:
+        return None
+    last = ts[-1]
+    if last[0] != 'D' or last[1] != nu:
+        return None
+    init = chain(mk_sum(ts[:-1]), base)
+    if last[2] == 0:
+        return C(e, init)
+    h, _ = split_high(last[2], nu)
+    if h != 0:
+        return None
+    e2 = chain_rp(last[2], nu, e)
+    return None if e2 is None else C(e2, init)
+
 def val(t):
     """順序数 t (Buchholz 項) の TC 項. 和は C(exp(p_m), … C(exp(p_2), ι(p_1)))."""
     return iota(t)
@@ -192,8 +209,22 @@ def iota(t):
         return Cn(degree, base_)
     # 2 段以上上の項が最後: 添字全体の値項を次数にする
     if nu == 0 and aprime != 0 and RULE2:
-        # R2: ψ_0(α'+q) は ψ_0(α'+ψ_1(α'+ψ_1(α))) と読む: 次数 = val(α') + ψ̂_1(α)
-        return C(C(iota(('D', 1, a)), val(aprime)), Z)
+        # R2n: ψ_0(α' + ψ_μ(b)), μ ≥ 2。E = ψ̂_{μ-1}(a)（Translate.lean と同じ）
+        en = iota(('D', mu - 1, a))
+        if b == 0:
+            return C(Cn(en, val(aprime)), Z)
+        bts = terms_of(b)
+        hq = mk_sum([q for q in bts if q[1] > mu])
+        lq = mk_sum([q for q in bts if q[1] <= mu])
+        if hq == 0:
+            ex = chain_rp_base(b, mu, en, omega_hat(mu))
+        elif lq != 0:
+            ex = chain_rp_base(lq, mu, en, iota(('D', mu, hq)))
+        else:
+            ex = None
+        if ex is None:
+            return C(iota(a), Z)
+        return C(C(ex, val(aprime)), Z)
     return C(val(a), base(nu))
 
 # ---------- CLI batch ----------
