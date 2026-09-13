@@ -102,6 +102,9 @@ The browser version needs no build: open `index.html`. The input is mirrored to 
   `supseq(f(M[4]), f(M[5]), f(M[6]))` (the exact sup of an increasing sequence inside C).
 - `tools/ebp_lab.js`: checks extended Buchholz ψ → C: ι(α) = supseq ι(α[4..6]) over the ψ-side fundamental
   sequence, ι(α[n]) < ι(α), standard form, and order against the neighbouring sheet row. Results in `sheet/tss_bad.json`.
+- `tools/ebp_std_rule.js`: predicts "ι(t) is a standard C term" for extended Buchholz ψ terms t by rule R4 and compares it with the
+  actual check (all 10110 normal cases agree: 3-row sheet rows 2000–4506 and their approximants). R4 excludes a collapse ψ_κ(X) (κ ≥ 1)
+  inside a subscript when a lower collapse encloses it and X ≥ Ω_{s+1}, s being the principal summand of the outermost subscript.
 - `tools/aaa_cmp.js`: comparison with a volunteer's (AAA) table of extended Buchholz ψ vs C (59 of 65 entries agree;
   the 6 disagreements are all of the form ψ_0(ψ_2(x)), where this repository's values agree with the sup search).
 - `tools/make_sheet.py`: generates the correspondence table.
