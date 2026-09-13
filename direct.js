@@ -36,6 +36,22 @@ function forest(M) {
   return acc === null ? Z : acc;
 }
 
+// 1 行目の親: 前の列で 1 行目の値が小さい最後の列。
+// r 行目の親: (r-1) 行目の親を順にたどり、r 行目の値が小さい最初の列（無ければ -1）。
+function parentAt(M, j, r) {
+  if (r === 0) {
+    for (let k = j - 1; k >= 0; k--) if (M[k][0] < M[j][0]) return k;
+    return -1;
+  }
+  let q = parentAt(M, j, r - 1);
+  while (q >= 0 && !(M[q][r] < M[j][r])) q = parentAt(M, q, r - 1);
+  return q;
+}
+
+const W1 = B.W(1), W2 = B.W(2);
+const fresh = base => base[0] === '0' ? W1 : C(W2, base);        // 段を 1 つ上げる: Ω̂_{k+1} = C(Ω_2, Ω̂_k)
+const omegaHat = k => { let t = Z; for (let i = 0; i < k; i++) t = fresh(t); return t; };
+
 // 根が 1 つの木（最初の列が根、残りの列の 1 行目は 1 以上）
 function tree(T) {
   const S = strip(T);
@@ -43,7 +59,49 @@ function tree(T) {
     // 1 行: 子の森の 1 行目から 1 を引いたものを指数にする
     return C(forest(S.slice(1).map(c => [c[0] - 1])), Z);
   }
-  return null;   // 2 行以上の木の規則は作業中
+  if (S[0].length === 2) return tree2(S);
+  return null;   // 3 行以上の木の規則は作業中
+}
+
+// 2 行の木（作業中 v0）。列 v の段 ν(v) = 0（2 行目が 0）、ν(2 行目の親) + 1（それ以外）。
+function tree2(T) {
+  const n = T.length, p1 = [], p2 = [], nu = [], kids = Array.from({ length: n }, () => []);
+  for (let j = 0; j < n; j++) {
+    p1[j] = parentAt(T, j, 0);
+    p2[j] = parentAt(T, j, 1);
+    nu[j] = T[j][1] === 0 || p2[j] < 0 ? 0 : nu[p2[j]] + 1;
+    if (p1[j] >= 0) kids[p1[j]].push(j);
+  }
+  // ν = 0 の節の値: 2 行目が正の子は値の鎖 P = C(e, …C(e, 0))、2 行目が 0 の子は P の上の鎖 L で C(L, P)。
+  // 2 行目が正の子がなければ ω^L = C(L, 0)。
+  function value0(u) {
+    let P = null, base = null;
+    for (const v of kids[u]) {
+      if (T[v][1] > 0) P = C(chain(v, W1, 1), P === null ? Z : P);
+      else base = C(contrib0(v), base === null ? (P === null ? Z : P) : base);
+    }
+    if (P === null) return C(base === null ? Z : base, Z);
+    return base === null ? P : C(base, P);
+  }
+  // 鎖の中の ν = 0 の列の指数: 節の値の log
+  const contrib0 = v => logC(value0(v));
+  // 段 level の列 u の子を土台 base に積む。段 1 は C(x, base) を直接重ね、段 2 以上は子の鎖 I を base の上に作って C(I, base)。
+  // 対角で合流する子（u のすぐ次の列 v で 2 行目の親が u、かつ u の 2 行目の親が u の 1 行目の親）は、
+  // 土台を C(Ω_2, base) にし、v の子へ同じ鎖を続ける。
+  function chain(u, base, level) {
+    let inner = null;
+    for (const v of kids[u]) {
+      if (v === u + 1 && T[v][1] > 0 && p2[v] === u && p2[u] === p1[u]) {
+        base = chain(v, fresh(base), level + 1);
+        continue;
+      }
+      const x = T[v][1] > 0 ? chain(v, omegaHat(nu[v]), nu[v]) : contrib0(v);
+      if (level >= 2) inner = C(x, inner === null ? base : inner);
+      else base = C(x, base);
+    }
+    return inner === null ? base : C(inner, base);
+  }
+  return value0(0);
 }
 
 function translate(s) {
