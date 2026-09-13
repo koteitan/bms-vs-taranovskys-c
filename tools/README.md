@@ -101,6 +101,7 @@ flowchart LR
 | `pss_tc.py` | 2 行の規則の Python 版と機械検査（`sheet/verify_bad.json` を書く） |
 | `rule_lab.js` | 2 行の規則の実験台（`bms2tc.js` の `RULES` を切り替え、上限探索と比べる） |
 | `ebp_lab.js` | 拡張 Buchholz ψ → C の検査（`--labels` で任意の表記、`--bad` で `sheet/tss_bad.json`） |
+| `sigma_lab.js` | 実験: 添字の中の崩壊による像のずれを直す写像 σ（f = ι∘σ）を原表の行で試す（`--off` で今の ι、`--low` で低い崩壊の中にも適用） |
 | `ebp_std_rule.js` | 拡張 Buchholz ψ の項が C の標準形に写るかを規則 R4 で判定し、実際の標準形判定と照合する（ずれの原因の切り分け用） |
 | `tss_sheet.js` | 3 行の行の翻訳（原表の表記経由）。`--web` でページ用の表 |
 | `psi_i_sup.js` | ψ(I) の像を上限探索で確かめる |
