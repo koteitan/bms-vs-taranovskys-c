@@ -19,13 +19,16 @@ const B = require(path.join(ROOT, 'bms2tc.js'));
 const CLI = path.join(ROOT, 'lean/.lake/build/bin/bms2tc');
 
 const args = process.argv.slice(2);
-let depth = 3, outFile = null;
+let depth = 3, outFile = null, matsArg = null;
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--depth') depth = +args[++i];
   else if (args[i] === '--out') outFile = args[++i];
+  else if (args[i] === '--mats') matsArg = args[++i].split(/[;\s]+/).filter(Boolean);
   else for (const f of args[i].split(',').filter(Boolean)) {
-    if (!(f in B.RULES)) { console.error('unknown rule', f); process.exit(3); }
-    B.RULES[f] = true;
+    // FLAG で有効、-FLAG で無効
+    const name = f.replace(/^-/, '');
+    if (!(name in B.RULES)) { console.error('unknown rule', name); process.exit(3); }
+    B.RULES[name] = !f.startsWith('-');
   }
 }
 
@@ -45,9 +48,10 @@ const isTwoRow = m => m.startsWith('(') && m.split(')')[0].split(',').length ===
 
 // ---- 対象の行列
 const rows = JSON.parse(fs.readFileSync(path.join(ROOT, 'sheet/bms_rows.json'), 'utf8'));
-const sheetMats = rows.map(r => r[1]).filter(isTwoRow);
+// --mats を渡すとシートの行を使わず、渡した行列とその展開（--depth 段）だけを調べる。
+const sheetMats = matsArg ? [] : rows.map(r => r[1]).filter(isTwoRow);
 const seen = new Set(sheetMats);
-let frontier = ['(0,0)(1,1)(2,2)', '(0,0)(1,1)(2,2)(3,3)', '(0,0)(1,1)(2,1)(3,2)', '(0,0)(1,1)(2,2)(3,2)',
+let frontier = matsArg || ['(0,0)(1,1)(2,2)', '(0,0)(1,1)(2,2)(3,3)', '(0,0)(1,1)(2,1)(3,2)', '(0,0)(1,1)(2,2)(3,2)',
   '(0,0)(1,1)(2,2)(3,3)(4,4)', '(0,0)(1,1)(2,2)(3,3)(3,3)', '(0,0)(1,1)(2,2)(3,2)(3,2)'];
 const sampled = [];
 for (const m of frontier) if (!seen.has(m)) { seen.add(m); sampled.push(m); }

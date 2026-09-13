@@ -23,6 +23,8 @@ Buchholz 項 → TC 項の規則 (tools/pss_tc.py と同一; 機械検査済み�
   ι(D_ν a), a = a_high ++ β (a_high: 添字 > ν の項, β: 添字 ≤ ν の項):
     a_high = 0, ν = 0:            C(ι(a), 0)
     a_high = 0, ν ≥ 1:            a = 0 → Ω̂_ν, else C(chain(a, Ω̂_ν), Ω̂_ν)
+      ただし ν ≥ 2 で a の最後の項を高さ ν のままたどって ψ_ν(0) に行き着くときは、
+      その ψ_ν(0) の指数 Ω̂_ν を E = Cn(chain(a, Ω̂_ν), Ω̂_{ν-1}) に置き換える      (N2)
     a_high ≠ 0, β ≠ 0:            P = ι(D_ν a_high);  C(chain(β, P), P)
     a_high = a' ++ [D_{ν+1} b]:   Cn(deg, ι(D_ν a') or base_ν),
                                   deg = chain(b, Ω̂_{ν+1}) (b < Ω_{ν+2}) / ι(b) (else)
@@ -112,6 +114,22 @@ mutual
   partial def chain (a : BT) (t : T) : T :=
     (termsOf a).foldl (fun acc q => .C (expT q) acc) t
 
+  /-- N2: `chain(a, Ω̂_ν)` の最後の項を高さ ν のままたどった先の ψ_ν(0) の指数 Ω̂_ν を
+  `e` に置き換える。途中で高さ ν でない項や高さ > ν の項に当たれば `none`。 -/
+  partial def chainRP (a : BT) (nu : Nat) (e : T) : Option T :=
+    let ts := termsOf a
+    match ts.getLast? with
+    | some (.D muI b) =>
+      if muI != (nu : Int) then none
+      else
+        let init := chain (mkSum ts.dropLast) (omegaHat nu)
+        if b == .zero then some (.C e init)
+        else
+          let (h, _) := splitHigh b nu
+          if h != .zero then none
+          else (chainRP b nu e).map fun e' => .C e' init
+    | _ => none
+
   partial def iota (t : BT) : T :=
     match t with
     | .zero => .zero
@@ -125,7 +143,11 @@ mutual
       if high == .zero then
         if nu == 0 then .C (iota a) .zero
         else if a == .zero then omegaHat nu
-        else .C (chain a (omegaHat nu)) (omegaHat nu)
+        else
+          let n2 := if nu ≥ 2 then chainRP a nu (Cn (chain a (omegaHat nu)) (omegaHat (nu - 1))) else none
+          match n2 with
+          | some lc => .C lc (omegaHat nu)
+          | none => .C (chain a (omegaHat nu)) (omegaHat nu)
       else if low != .zero then
         let P := iota (.D nuI high)
         .C (chain low P) P

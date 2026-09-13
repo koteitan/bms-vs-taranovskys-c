@@ -468,8 +468,8 @@ function splitHigh(a, nu) {
   return [mkSum(ts.filter(q => nuOf(q) > nu)), mkSum(ts.filter(q => nuOf(q) <= nu))];
 }
 
-// 実験用の規則スイッチ（tools/rule_lab.js が書き換える）。既定はすべて false = 現行規則。
-const RULES = { N1: false, N1exp: false, N2: false, N2exp: false };
+// 規則スイッチ（tools/rule_lab.js が書き換える）。N2 は採用済み（Lean / Python と同じ）、他は実験中。
+const RULES = { N1: false, N1exp: false, N2: true, N2exp: false };
 
 // N2: ν ≥ 2、a の項がすべて高さ ≤ ν のとき、Ω̂_ν + a = chain(a, Ω̂_ν) の「最後の項を高さ ν のまま
 // たどった先の ψ_ν(0) の指数 Ω̂_ν」を E に置き換える。たどれなければ null。

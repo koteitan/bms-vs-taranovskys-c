@@ -137,6 +137,23 @@ def exp(p):
         return chain(low, iota(('D', nu, high)))   # ψ_ν(a_high+β) = ω^{P+β}
     return iota(p)                                 # ε 数
 
+def chain_rp(a, nu, e):
+    """N2: chain(a, Ω̂_ν) の最後の項を高さ ν のままたどった先の ψ_ν(0) の指数 Ω̂_ν を e に置き換える."""
+    ts = terms_of(a)
+    if not ts:
+        return None
+    last = ts[-1]
+    if last[0] != 'D' or last[1] != nu:
+        return None
+    init = chain(mk_sum(ts[:-1]), omega_hat(nu))
+    if last[2] == 0:
+        return C(e, init)
+    h, _ = split_high(last[2], nu)
+    if h != 0:
+        return None
+    e2 = chain_rp(last[2], nu, e)
+    return None if e2 is None else C(e2, init)
+
 def val(t):
     """順序数 t (Buchholz 項) の TC 項. 和は C(exp(p_m), … C(exp(p_2), ι(p_1)))."""
     return iota(t)
@@ -154,6 +171,11 @@ def iota(t):
     if high == 0:
         if nu == 0: return C(iota(a), Z)
         if a == 0: return omega_hat(nu)
+        if nu >= 2:
+            # N2: 最後の項を高さ ν のままたどった先の ψ_ν(0) の指数を ψ̂_{ν-1}(Ω_ν + a) に
+            lc = chain_rp(a, nu, Cn(chain(a, omega_hat(nu)), omega_hat(nu - 1)))
+            if lc is not None:
+                return C(lc, omega_hat(nu))
         return C(chain(a, omega_hat(nu)), omega_hat(nu))
     if low != 0:
         P = iota(('D', nu, high))
