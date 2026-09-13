@@ -36,6 +36,10 @@ Buchholz 項 → TC 項の規則 (tools/pss_tc.py と同一; 機械検査済み�
                                  （expRP。log / ι / chain の計算の形をなぞる。道がなければ C(ι(a), 0)）(R2g)
     a_high = a' ++ [D_1 b], ν = 0, b が添字 ≥ 2 を含み最後の項 q が段 m ≥ 2:              (R1d)
       上の deg = ι(b) を、E = ψ̂_{m-1}(b) で q について R2g と同じ置き換えをしたものにする
+    R2g で道がなく、b の項がすべて添字 > μ・2 項以上・最後の項 q の段 m ≥ μ+2:            (R2x)
+      log ψ_μ(b) = C(ι(b), Ω̂_μ) の ι(b) を R1d と同じく E = ψ̂_{m-1}(b) で置き換える
+    R2g の結果は C(Cn(ex, ι(a')), 0)（R2k）。chain と和の ι は C の代わりに Cn で組む（CnAll）。
+    （論文の定義では非標準の C(x, C(c,d))（c < x）は C(x,d) に等しいので、Cn は値を変えない）
     その他:                        C(ι(a), base_ν)
   base_0 = 0, base_ν = Ω̂_ν.  Cn(x, b) は b = C(c,d), x > c の間 b := d と縮める。
 -/
@@ -129,7 +133,8 @@ mutual
     | t => iota t
 
   partial def chain (a : BT) (t : T) : T :=
-    (termsOf a).foldl (fun acc q => .C (expT q) acc) t
+    -- CnAll: C の代わりに第 2 引数の最小化つきの Cn（値は変わらず標準形に近づく）
+    (termsOf a).foldl (fun acc q => Cn (expT q) acc) t
 
   /-- N2: `chain(a, Ω̂_ν)` の最後の項を高さ ν のままたどった先の ψ_ν(0) の指数 Ω̂_ν を
   `e` に置き換える。途中で高さ ν でない項や高さ > ν の項に当たれば `none`。 -/
@@ -228,7 +233,7 @@ mutual
     | .sum ts =>
       match ts with
       | [] => .zero
-      | p :: rest => rest.foldl (fun acc q => .C (expT q) acc) (iota p)
+      | p :: rest => rest.foldl (fun acc q => Cn (expT q) acc) (iota p)   -- CnAll
     | .D nuI a =>
       let nu := nuI.toNat
       let (high, low) := splitHigh a nu
@@ -277,8 +282,24 @@ mutual
               if b == .zero then .C (Cn en (iota aprime)) .zero
               else
                 match expRP (.D muI b) mu en with
-                | some e => .C (.C e (iota aprime)) .zero
-                | none => .C (iota a) .zero
+                | some e => .C (Cn e (iota aprime)) .zero   -- R2k
+                | none =>
+                  -- R2x: b の項がすべて添字 > μ・2 項以上・最後の項の段 m ≥ μ+2 のとき、
+                  -- log ψ_μ(b) = C(ι(b), Ω̂_μ) の ι(b) の中で E = ψ̂_{m-1}(b) の置き換え
+                  let bts2 := termsOf b
+                  let deg : Option T :=
+                    match bts2.getLast? with
+                    | some (.D m2I c2) =>
+                      if bts2.length ≥ 2 && bts2.all (fun q => nuOf q > (mu : Int)) && m2I ≥ (mu : Int) + 2 then
+                        let binit := mkSum bts2.dropLast
+                        let e2 := iota (.D (m2I - 1) b)
+                        if c2 == .zero then some (Cn e2 (iota binit))
+                        else (expRP (.D m2I c2) m2I.toNat e2).map fun r => .C r (iota binit)
+                      else none
+                    | _ => none
+                  match deg with
+                  | some d => .C (.C (.C d (omegaHat mu)) (iota aprime)) .zero
+                  | none => .C (iota a) .zero
             else
               .C (iota a) (baseOf nu)
           | _ => .zero

@@ -469,7 +469,7 @@ function splitHigh(a, nu) {
 }
 
 // 規則スイッチ（tools/rule_lab.js が書き換える）。N2 は採用済み（Lean / Python と同じ）、他は実験中。
-const RULES = { N1: false, N1exp: false, N2: true, N2exp: false, R2p: false, R2s: false, R2e: false, R2u: false, R2z: false, R2n: true, R2h: false, R1d: true, R2g: true, R2x: false, R2k: false, CnAll: false };
+const RULES = { N1: false, N1exp: false, N2: true, N2exp: false, R2p: false, R2s: false, R2e: false, R2u: false, R2z: false, R2n: true, R2h: false, R1d: true, R2g: true, R2x: true, R2k: true, CnAll: true };
 
 // N2: ν ≥ 2、a の項がすべて高さ ≤ ν のとき、Ω̂_ν + a = chain(a, Ω̂_ν) の「最後の項を高さ ν のまま
 // たどった先の ψ_ν(0) の指数 Ω̂_ν」を E に置き換える。たどれなければ null。

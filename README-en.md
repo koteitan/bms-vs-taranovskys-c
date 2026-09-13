@@ -60,8 +60,11 @@ BM4. `M[n]` follows the yaBMS convention (append n copies of the bad part; `M[0]
 - 2 rows (pair sequence): map to Buchholz's notation (0, D_ν, +) by p進大好きbot's map,
   then to C by the rules ι at the top of `Translate.lean`,
   with Ω̂_1 = Ω_1, Ω̂_{ν+1} = C(Ω_2, Ω̂_ν) as the base of D_ν. For ν ≥ 2, when the last term of the argument
-  has the same level ν, rule N2 replaces its exponent by ψ̂_{ν-1}(Ω_ν + a). The last term of ψ_0(α' + ψ_μ(b)) (μ ≥ 2)
-  follows rule R2u (plain sum if b is a successor, contextual ι if b = α' + (level-μ terms), otherwise collapsed to ψ̂_{μ-1}(a)).
+  has the same level ν, rule N2 replaces its exponent by ψ̂_{ν-1}(Ω_ν + a). For the last term of ψ_0(α' + ψ_μ(b)) (μ ≥ 2),
+  follow the rightmost path inside log ψ_μ(b) through terms of level ≥ μ and replace the exponent of the bare Ω_μ reached by
+  E = ψ̂_{μ-1}(a) (R2n/R2g; if b = 0 the exponent is E itself). If there is no such path and the last term of b has level m ≥ μ+2,
+  do the replacement inside ι(b) with E = ψ̂_{m-1}(b) (R2x). The same replacement is done inside ι(b) for ψ_0(α' + ψ_1(b)) (R1d).
+  Sums and chains are built with the second-argument minimization Cn (R2k, CnAll; by the paper's definition the value is unchanged).
 - 3 rows (rows of the BM4-Analysis sheet up to ψ(I)): not translated from the matrix directly; the sheet's UNOCF
   label is read as an extended Buchholz ψ term and mapped to C by `ebp2tc.js`, with transfinite subscripts
   Ω̂_{γ+ω^e} = C(Ω_2 + e, Ω̂_γ) (Ω_2 + e is the sum chain of e on the base Ω_2):
@@ -110,9 +113,13 @@ segment, hence unique. The checks above test this property on finitely many α; 
 
 See the summary in `sheet/README-en.md`.
 
-- 2 rows: with rules R2n, R2g and R1d, 309 of the 313 limits in `tools/rule_lab.js` (sheet rows and sampled expansions) pass the checks
-  (sup match, above the approximants, standard form), and no failure has standard approximants.
-- 3 rows: 4484 rows via the sheet's labels (including the ψ(I) row); 4478 raise nothing in `tools/ebp_lab.js`.
-  Flagged rows include the form where the last term inside ψ_ω is Ω_{ω+k}, subscripts containing ψ, and 48 rows whose label order is reversed against the BMS order.
+- 2 rows: with rules N2, R2n, R2g, R1d, R2x, R2k and CnAll, all 313 limits in `tools/rule_lab.js` (sheet rows and sampled expansions)
+  pass the checks (sup match, above the approximants, standard form).
+- 3 rows: 4490 of the 4503 sheet rows raise nothing in `tools/ebp_lab.js`.
+  Flagged rows: 48 rows whose label order is reversed against the BMS order, non-normal labels, and the collapse-in-subscript form Ω_{ψ_1(Ω_{Ω_2})}.
+- Open: 214 rows above terms whose subscript μ has an uncountable fundamental sequence Ω_{κ+1} (κ ≥ 1, e.g. Ω_{Ω_2}) pass the checks,
+  but some of their approximants are non-standard, so the sup check is weak there. Row 2574 ψ_0(Ω_{Ω_2}+Ω_{ψ_1(Ω_{Ω_2})}) has standard
+  approximants whose sup equals the current image of ψ_0(Ω_{Ω_2}·2), C(C(Q,Q),0) with Q = C(C(C(Ω_2,Ω),Ω_2),0),
+  so the images in this range are likely shifted.
 - ψ(I) = (0,0,0)(1,1,1)(2,1,1)(3,1,0)(2,0,0) ↦ C(C(C(Ω_2,Ω_2),0),0).
   `tools/psi_i_sup.js` checks that the sup of the images of ψ_0(Ω_{Ω_{…Ω}}) is this term.

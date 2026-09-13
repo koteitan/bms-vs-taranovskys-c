@@ -137,6 +137,9 @@ for (const it of items.filter(i => i.error).slice(0, 10)) console.log('ERR', it.
 const bads = items.filter(it => it.bad && it.bad.length)
   .sort((a, b) => (b.approxStd === true) - (a.approxStd === true));
 console.log(`failures with standard approximants (oracle trusted): ${bads.filter(it => it.approxStd).length}`);
+// 通過しても近似列に非標準があれば上限の照合は弱い（上限探索の答えが汚れている）
+const weak = items.filter(it => it.tc && it.bad && it.bad.length === 0 && it.approx && it.approxStd === false);
+console.log(`clean but some approximants non-standard (weak sup check): ${weak.length}`, weak.slice(0, 40).map(it => it.idx).join(' '));
 for (const it of bads.slice(0, labelsArg ? 200 : 25)) {
   if (it.approxStd) process.stdout.write('[trusted] ');
   console.log('BAD', it.idx, it.label, it.bad.join(','), it.std ? '' : '(EBψ non-normal)', '\n    ι      =', it.tc, it.oracle ? '\n    oracle = ' + it.oracle : '');
@@ -158,4 +161,4 @@ if (badIdx >= 0) {
   }
   fs.writeFileSync(badFile, JSON.stringify(bad, null, 1));
 }
-if (outFile) fs.writeFileSync(outFile, JSON.stringify(items.map(it => ({ idx: it.idx, bms: it.bms, label: it.label, tc: it.tc, oracle: it.oracle, bad: it.bad, error: it.error, std: it.std })), null, 1));
+if (outFile) fs.writeFileSync(outFile, JSON.stringify(items.map(it => ({ idx: it.idx, bms: it.bms, label: it.label, tc: it.tc, oracle: it.oracle, bad: it.bad, error: it.error, std: it.std, approxStd: it.approxStd })), null, 1));

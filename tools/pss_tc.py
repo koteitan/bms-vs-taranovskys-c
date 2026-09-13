@@ -99,8 +99,9 @@ def mk_sum(ts):
     return ('S', ts)
 
 def chain(a, t):
+    # CnAll: C の代わりに第 2 引数の最小化つきの Cn（値は変わらず標準形に近づく）
     for q in terms_of(a):
-        t = C(exp(q), t)
+        t = Cn(exp(q), t)
     return t
 
 def split_high(a, nu):
@@ -245,7 +246,7 @@ def iota(t):
         ts = t[1]
         r = iota(ts[0])
         for q in ts[1:]:
-            r = C(exp(q), r)
+            r = Cn(exp(q), r)   # CnAll
         return r
     nu, a = t[1], t[2]
     high, low = split_high(a, nu)
@@ -291,9 +292,24 @@ def iota(t):
         if b == 0:
             return C(Cn(en, val(aprime)), Z)
         ex = exp_rp(('D', mu, b), mu, en)   # R2g
-        if ex is None:
-            return C(iota(a), Z)
-        return C(C(ex, val(aprime)), Z)
+        if ex is not None:
+            return C(Cn(ex, val(aprime)), Z)   # R2k
+        # R2x: b の項がすべて添字 > μ・2 項以上・最後の項の段 m ≥ μ+2 のとき、ι(b) の中で E = ψ̂_{m-1}(b) の置き換え
+        bts = terms_of(b)
+        if len(bts) >= 2 and all(q[1] > mu for q in bts) and bts[-1][1] >= mu + 2:
+            q2 = bts[-1]
+            binit = mk_sum(bts[:-1])
+            e2 = iota(('D', q2[1] - 1, b))
+            deg = None
+            if q2[2] == 0:
+                deg = Cn(e2, val(binit))
+            else:
+                r = exp_rp(q2, q2[1], e2)
+                if r is not None:
+                    deg = C(r, val(binit))
+            if deg is not None:
+                return C(C(C(deg, omega_hat(mu)), val(aprime)), Z)
+        return C(iota(a), Z)
     return C(val(a), base(nu))
 
 # ---------- CLI batch ----------

@@ -13,7 +13,7 @@ const { ONE, P, terms, mk, nat, natValue, cmp, succ, pred, splitHigh, logP } = E
 
 const tcmp = B.cmp;
 // 実験用の規則スイッチ（tools/ebp_lab.js が書き換える）
-const RULES = { R2p: false, R2s: false, R2c: false, R2e: false, R2u: false, R2z: false, R2n: true, R2h: false, R1d: true, R2g: true, R2x: false, R2k: false, CnAll: false };
+const RULES = { R2p: false, R2s: false, R2c: false, R2e: false, R2u: false, R2z: false, R2n: true, R2h: false, R1d: true, R2g: true, R2x: true, R2k: true, CnAll: true };
 
 // R2x（実験）: q = ψ_μ(b) で b の項がすべて添字 > μ・2 項以上、最後の項 q2 の段 m が後続で m ≥ μ+2 のとき、
 //   log q = ι(q) = C(ι(b), Ω̂_μ) の ι(b) で、q2 について E = ψ̂_{m-1}(b) の置き換え（R1d と同じ）をしたもの。
