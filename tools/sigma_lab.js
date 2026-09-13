@@ -39,7 +39,9 @@ function fixAll(t) {
 //   (1) y の添字 i の主項としての Ω_k、(2) a の最上位の項 ψ_{Ω_k}(..) の添字 Ω_k。崩壊の中の奥は置き換えない
 function normE(L, y, yTop) {
   const Wk = P(nat(L.k), 0), Ek = P(nat(L.k - 1), yTop);
-  const idx = sum(terms(y.i).map(s => eq(s, Wk) ? Ek : s));
+  // (3) y の添字の主項 s = ψ_j(c) の引数 c の最上位の項としての Ω_k
+  const idx = sum(terms(y.i).map(s => eq(s, Wk) ? Ek
+    : (s.a !== 0 && terms(s.a).some(p => eq(p, Wk))) ? P(s.i, sum(terms(s.a).map(p => eq(p, Wk) ? Ek : p))) : s));
   const arg = y.a === 0 ? 0 : sum(terms(y.a).map(p => eq(p.i, Wk) ? P(Ek, p.a) : p));
   return P(idx, arg);
 }
