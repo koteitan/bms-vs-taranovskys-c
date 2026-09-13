@@ -13,7 +13,7 @@ const path = require('path');
 const ROOT = path.dirname(__dirname);
 const E = require(path.join(ROOT, 'ebpsi.js'));
 const X = require(path.join(ROOT, 'ebp2tc.js'));
-const B = require(path.join(ROOT, 'bms2tc.js'));
+const SIG = require(path.join(ROOT, 'ebp_sigma.js'));   // f(t) = ι(σ(t))
 
 const rows = JSON.parse(fs.readFileSync(path.join(ROOT, 'sheet/bms_rows.json'), 'utf8'));
 let bad = {};
@@ -33,7 +33,7 @@ for (const [sheet, b, u] of rows) {
   try { t = E.parseLabel(X.fixLabel(u)); } catch (e) { out[b] = { tc: '', status: 'untranslated', note: 'label not parsed' }; continue; }
   if (!E.isStd(t)) { out[b] = { tc: '', status: 'untranslated', note: 'label not in Buchholz normal form' }; continue; }
   let tc;
-  try { tc = B.tcToString(X.iota(t), false); } catch (e) { out[b] = { tc: '', status: 'untranslated', note: 'iota: ' + e.message }; continue; }
+  try { tc = SIG.tcOf(t); } catch (e) { out[b] = { tc: '', status: 'untranslated', note: 'iota: ' + e.message }; continue; }
   if (bad[b]) out[b] = { tc, status: 'ocf-flagged', note: bad[b].join(', ') };
   else out[b] = { tc, status: 'ocf', note: '' };
 }

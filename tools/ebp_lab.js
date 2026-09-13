@@ -26,6 +26,7 @@ for (let i = 0; i < args.length; i++) {
   else if (args[i] === '--from') from = +args[++i];
   else if (args[i] === '--to') to = +args[++i];
   else if (args[i] === '--desc') desc = true;
+  else if (args[i] === '--nosigma') { /* tcs で見る */ }
   else if (args[i] === '--out') outFile = args[++i];
   else if (args[i] === '--bad') i++;
   else if (args[i] === '--labels') labelsArg = args[++i].split(';').map(x => x.trim()).filter(Boolean);
@@ -44,7 +45,9 @@ function batch(lines) {
   if (out.length < lines.length) throw new Error(`batch: ${out.length} < ${lines.length}`);
   return lines.map((_, i) => out[i].trim());
 }
-const tcs = t => B.tcToString(X.iota(t), false);
+// 翻訳は f(t) = ι(σ(t))（ebp_sigma.js）。--nosigma で今の ι だけ
+const SIG = require(path.join(ROOT, 'ebp_sigma.js'));
+const tcs = t => process.argv.includes('--nosigma') ? B.tcToString(X.iota(t), false) : SIG.tcOf(t);
 const nrows = b => (b.startsWith('(') ? b.split(')')[0].split(',').length : 0);
 
 // ---- 対象

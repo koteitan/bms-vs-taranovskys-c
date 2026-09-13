@@ -70,6 +70,10 @@ BM4. `M[n]` follows the yaBMS convention (append n copies of the bad part; `M[0]
   Ω̂_{γ+ω^e} = C(Ω_2 + e, Ω̂_γ) (Ω_2 + e is the sum chain of e on the base Ω_2):
   Ω_ω → C(C(0,Ω_2),0), Ω_{ω^2} → C(C(0,C(0,Ω_2)),0), Ω_Ω → C(C(Ω_1,Ω_2),0), ψ(I) → C(C(C(Ω_2,Ω_2),0),0),
   matching the volunteer analysis and the sup-search landmarks.
+  ι alone cannot map terms whose subscripts contain collapses such as ψ_1(Ω_{Ω_2}) to standard C terms (rule R4), and the
+  images above them drift. The translation is therefore f = ι∘σ, where σ (`ebp_sigma.js`) first sends the term order-preservingly
+  to terms ι can handle: ψ_1(Ω_{Ω_2}+Y) in a subscript ↦ ψ_2(Y'), a later Ω_{Ω_2}-level term ↦ Ω_{ψ_2(…)}, and the same one level up
+  (Ω_{Ω_3}). This changes rows 2574–2795 of the sheet (e.g. ψ_0(Ω_{Ω_2}·2) ↦ ι(ψ_0(Ω_{ψ_2(Ω_{ψ_1(Ω_{Ω_2}·2)})}))).
 - 4 rows and more: not supported.
 
 Range: 1 and 2 rows, plus the 3-row rows present in the sheet (up to ψ(I)).
@@ -118,11 +122,11 @@ See the summary in `sheet/README-en.md`.
 
 - 2 rows: with rules N2, R2n, R2g, R1d, R2x, R2k and CnAll, all 313 limits in `tools/rule_lab.js` (sheet rows and sampled expansions)
   pass the checks (sup match, above the approximants, standard form).
-- 3 rows: 4490 of the 4503 sheet rows raise nothing in `tools/ebp_lab.js`.
-  Flagged rows: 48 rows whose label order is reversed against the BMS order, non-normal labels, and the collapse-in-subscript form Ω_{ψ_1(Ω_{Ω_2})}.
-- Open: 214 rows above terms whose subscript μ has an uncountable fundamental sequence Ω_{κ+1} (κ ≥ 1, e.g. Ω_{Ω_2}) pass the checks,
-  but some of their approximants are non-standard, so the sup check is weak there. Row 2574 ψ_0(Ω_{Ω_2}+Ω_{ψ_1(Ω_{Ω_2})}) has standard
-  approximants whose sup equals the current image of ψ_0(Ω_{Ω_2}·2), C(C(Q,Q),0) with Q = C(C(C(Ω_2,Ω),Ω_2),0),
-  so the images in this range are likely shifted.
+- 3 rows: 4492 of the 4503 sheet rows raise nothing in `tools/ebp_lab.js` (translation f = ι∘σ).
+  Flagged rows: 48 rows whose label order is reversed against the BMS order, non-normal labels, and a few others.
+- Effect of σ: the approximants of row 2574 ψ_0(Ω_{Ω_2}+Ω_{ψ_1(Ω_{Ω_2})}) have a sup equal to the ι-only image of ψ_0(Ω_{Ω_2}·2),
+  so the images above it had drifted. With σ the images of 210 rows (2574–2795) change and no row gets worse (`tools/sigma_lab.js`).
+- Open: 180 rows pass the checks but some approximants are non-standard, so the sup check is weak there (214 with ι alone):
+  Ω_{Ω_2} inside the argument of a lower collapse (e.g. ψ_0(Ω_{Ω_2}+ψ_2(Ω_{Ω_2}))), ψ_0(Ω_{Ω_3}+Ω_{Ω_2}), the Ω_{Ω_{ω+1}} level and above.
 - ψ(I) = (0,0,0)(1,1,1)(2,1,1)(3,1,0)(2,0,0) ↦ C(C(C(Ω_2,Ω_2),0),0).
   `tools/psi_i_sup.js` checks that the sup of the images of ψ_0(Ω_{Ω_{…Ω}}) is this term.

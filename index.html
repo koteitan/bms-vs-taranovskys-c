@@ -8,7 +8,7 @@
 </head>
 <body>
 <header>
-  <h1>Translation of BMS to Taranovsky's C <span class="version">v0.1.9</span></h1>
+  <h1>Translation of BMS to Taranovsky's C <span class="version">v0.1.10</span></h1>
   <div class="menu">
     <button id="menu-btn" class="menu-btn" aria-label="menu" aria-expanded="false">&#9776;</button>
     <div id="menu-panel" class="menu-panel" hidden>
@@ -40,7 +40,8 @@
       <li>3 行: BM4-Analysis シートにある行（(0,0,0)(1,1,1)(2,1,1)(3,1,0)(2,0,0) = ψ(I) まで）だけ対応します。
           シートの順序数表記（拡張 Buchholz ψ）を C に写したもので、行列からの直接の翻訳ではありません。
           「⚠ flagged」は機械検査で指摘があった行です。4 行以上は未対応です。
-          ψ(Ω_{Ω_2}) より上で添字に Ω_{Ω_2} 型を含む行は検査が弱く、値がずれている可能性があります。<br>
+          添字の中の崩壊（ψ_1(Ω_{Ω_2}) など）で起きる値のずれは写像 σ で直していますが、
+          一部の行（低い崩壊の中に Ω_{Ω_2} を含む行など）は検査が弱いままです。<br>
           3 rows: only rows of the BM4-Analysis sheet up to (0,0,0)(1,1,1)(2,1,1)(3,1,0)(2,0,0) = ψ(I).
           The term is the sheet's ordinal label (extended Buchholz ψ) mapped to C, not a direct translation of the matrix.
           "⚠ flagged" marks rows where the machine checks raised something. 4 rows and more are not supported.

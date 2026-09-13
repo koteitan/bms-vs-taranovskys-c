@@ -1,134 +1,47 @@
-// sigma2.js FROM TO [--off] : σ for arguments starting with Ω_{Ω_2}
-//   a = Ω_{Ω_2} + t_2 + ... ; subscript summand s of a later term:
-//   s < η: keep;  s = ψ_1(Ω_{Ω_2}+Y) ↦ ψ_2(Y');  term t_j = Ω_{Ω_2} ↦ Ω_{ψ_2((t_2+..+t_j)')}
-//   Y' = Y with its m-th term Ω_{Ω_2} replaced by Ω_{ψ_1(Ω_{Ω_2}+y_1+..+y_m)}
+#!/usr/bin/env node
+// 実験台: 写像 σ（ebp_sigma.js、f = ι∘σ）を原表の 3 行の行で試す。
+//
+//   node tools/sigma_lab.js FROM TO [--off] [--k2] [--low] [--eorig] [+FLAG] [--json FILE]
+//
+//   --off    σ をかけない（今の ι）
+//   --k2     段 1 のあとに段 2（Ω_{Ω_3} の段）も当てる（既定は段 1 だけ）
+//   --low    低い崩壊 ψ_ν(b)（ν ≥ 1）の引数にも当てる
+//   --eorig  最後の低い項の R2n の E を σ の前の引数から作る
+//   +FLAG    ebp2tc.js の RULES[FLAG] を有効にする（例 +R2nu）
+//   --json   行ごとの判定と C の項を書き出す
+//
+// 行ごとに、像の標準形、近似列 α[4..6] の像の標準形、その上限探索との一致、隣の行との順序を調べて集計する。
+// 本番の翻訳（tools/tss_sheet.js, tools/ebp_lab.js）の設定は `--k2 --eorig +R2nu` と同じ。
 const path = require('path');
 const fs = require('fs');
 const { spawnSync } = require('child_process');
-const ROOT = path.join(__dirname, "..");
+const ROOT = path.join(__dirname, '..');
 const E = require(path.join(ROOT, 'ebpsi.js'));
 const X = require(path.join(ROOT, 'ebp2tc.js'));
 const B = require(path.join(ROOT, 'bms2tc.js'));
+const { makeSigma } = require(path.join(ROOT, 'ebp_sigma.js'));
 const CLI = path.join(ROOT, 'lean/.lake/build/bin/bms2tc');
 const batch = lines => {
   if (!lines.length) return [];
   const out = spawnSync(CLI, ['batch'], { input: lines.join('\n') + '\n', encoding: 'utf8', maxBuffer: 1 << 30 }).stdout.split('\n');
   return lines.map((_, i) => (out[i] || '').trim());
 };
-const { P, nat, terms, mk, cmp, eq, add, natValue } = E;
-const sum = ts => ts.reduce((acc, p) => add(acc, p), 0);
 
-// 段 k（k = 1, 2, …）の定数: W = Ω_{k+1}, OO = Ω_{Ω_{k+1}}, ETA = ψ_k(Ω_{Ω_{k+1}}),
-//   BOUND = ψ_{k+1}(Ω_{Ω_{k+1}})（これ以上の添字では式の像が元の項より小さくなる）
-function level(k) {
-  const W = P(nat(k + 1), 0), OO = P(W, 0);
-  return { k, W, OO, ETA: P(nat(k), OO), BOUND: P(nat(k + 1), OO), CUR: nat(k), NEXT: nat(k + 1) };
-}
-// --k2: 段 1 のあとに段 2（Ω_{Ω_3} の段）も当てる
-const LEVELS = (process.argv.includes('--k2') ? [1, 2] : [1]).map(level);
-// 段 k の項: 添字が Ω_{k+1} 以上 BOUND 未満（最上位の置き換え用）。isBig: 添字が Ω_{k+1} 以上（λ と添字の規則用）
-const isO = (L, q) => q !== 0 && !Array.isArray(q) && cmp(q.i, L.W) >= 0 && cmp(q.i, L.BOUND) < 0;
-const isBig = (L, q) => q !== 0 && !Array.isArray(q) && cmp(q.i, L.W) >= 0;
-// 中の可算の崩壊 ψ_0(..) にも σ を当てる
-function fixAll(t) {
-  let out = 0;
-  for (const p of terms(t)) out = add(out, natValue(p.i) === 0 ? top(p) : P(fixAll(p.i), fixAll(p.a)));
-  return out;
-}
-// 段 k ≥ 2: 大きい項 y = ψ_i(a) の浅い位置の Ω_k を ψ_{k-1}(y) に置き換える（値は同じ）
-//   (1) y の添字 i の主項としての Ω_k、(2) a の最上位の項 ψ_{Ω_k}(..) の添字 Ω_k。崩壊の中の奥は置き換えない
-function normE(L, y, yTop) {
-  const Wk = P(nat(L.k), 0), Ek = P(nat(L.k - 1), yTop);
-  // (3) y の添字の主項 s = ψ_j(c) の引数 c の最上位の項としての Ω_k
-  const idx = sum(terms(y.i).map(s => eq(s, Wk) ? Ek
-    : (s.a !== 0 && terms(s.a).some(p => eq(p, Wk))) ? P(s.i, sum(terms(s.a).map(p => eq(p, Wk) ? Ek : p))) : s));
-  const arg = y.a === 0 ? 0 : sum(terms(y.a).map(p => eq(p.i, Wk) ? P(Ek, p.a) : p));
-  return P(idx, arg);
-}
-// λ(b): b の先頭の Ω_{Ω_{k+1}} を落とし、残りの大きい項 y_m を Ω_{ψ_k(b_{≤m})} に置き換えた和
-function lam(L, b) {
-  if (L.k >= 2) b = sum(terms(b).map(y => (isBig(L, y) && !eq(y, L.OO)) ? normE(L, y, y) : y));
-  const bs = terms(b), out = [];
-  bs.forEach((y, m) => {
-    if (m === 0 && eq(y, L.OO)) return;
-    if (isBig(L, y)) out.push(P(P(L.CUR, sum(bs.slice(0, m + 1))), 0));
-    else out.push(y);
-  });
-  return sum(out);
-}
-function slot(L, s) {         // 添字の主項 s: ψ_k(大きい項 + Y) ↦ ψ_{k+1}(λ)
-  if (cmp(s, L.ETA) < 0) return s;
-  if (natValue(s.i) === L.k && terms(s.a).length && isBig(L, terms(s.a)[0])) return P(L.NEXT, lam(L, s.a));
-  return s;
-}
-// --low: 低い崩壊 ψ_ν(b)（ν ≥ 1）の引数 b にも同じ変換を当てる
-const LOW = process.argv.includes('--low');
-function argT(L, xs) {
-  const out = [];
-  let first = -1;   // 最初の段 k の項の位置
-  for (let j = 0; j < xs.length; j++) {
-    const q = xs[j];
-    if (isO(L, q)) {
-      if (first < 0) first = j;
-      if (j === first && eq(q, L.OO)) out.push(q);
-      else {
-        const seg = xs.slice(first, j + 1);
-        const pre = eq(seg[0], L.OO) ? seg : [L.OO, ...seg];
-        out.push(P(P(L.NEXT, lam(L, sum(pre))), 0));
-      }
-      continue;
-    }
-    const n = natValue(q.i);
-    if (n === 0) { out.push(q); continue; }                                  // 可算の崩壊は fixAll 済み
-    const a = (LOW && q.a !== 0) ? argT(L, terms(q.a)) : q.a;
-    if (n !== null) { out.push(P(q.i, a)); continue; }                       // 有限添字の低い項
-    out.push(P(sum(terms(q.i).map(s => slot(L, s))), a));
-  }
-  return sum(out);
-}
-function top(t) {
-  if (t.a === 0) return t;
-  let xs = terms(fixAll(t.a));
-  if (!xs.length) return t;
-  for (const L of LEVELS) {
-    if (!LOW && (!isO(L, xs[0]) || (xs.length === 1 && eq(xs[0], L.OO)))) continue;
-    xs = terms(argT(L, xs));
-  }
-  return P(0, mk(xs));
-}
-
-module.exports = { top, slot, lam, level };
-if (require.main !== module) return;
 const args = process.argv.slice(2);
 const off = args.includes('--off');
-// +FLAG で ebp2tc.js の RULES[FLAG] を有効にする
 for (const f of args.filter(a => a.startsWith('+'))) X.RULES[f.slice(1)] = true;
-const [from, to] = args.filter(a => !a.startsWith('--')).map(Number);
-const tr = t => (off || Array.isArray(t) || t === 0 || natValue(t.i) !== 0) ? t : top(t);
-// --eorig: 最後の低い項 ψ_μ(b)（μ ≥ 2 の後続）が σ で変わらず R2n の形なら、
-//   E = ψ̂_{μ-1}(a) を σ をかける前の引数 a から作る（残りは σ の像）
-const EORIG = args.includes('--eorig');
-function tcs(t) {
-  const t2 = tr(t);
-  if (EORIG && !off && !Array.isArray(t) && t !== 0 && natValue(t.i) === 0 && cmp(t, t2) !== 0) {
-    const xs = terms(t.a), ys = terms(t2.a);
-    const last = xs[xs.length - 1];
-    if (xs.length >= 2 && ys.length >= 2 && eq(last, ys[ys.length - 1])) {
-      const mu = last.i, nv = natValue(mu), mp = E.pred(mu);
-      if (mp !== null && (nv === null || nv >= 2)) {
-        const En = X.iota(P(mp, t.a));
-        const ap2 = X.iota(mk(ys.slice(0, -1)));
-        if (last.a === 0) return B.tcToString(X.C(X.Cn(En, ap2), X.Z), false);
-        const exg = X.expRP(last, mu, En);
-        if (exg !== null) return B.tcToString(X.C(X.Cn(exg, ap2), X.Z), false);
-      }
-    }
-  }
-  return B.tcToString(X.iota(t2), false);
-}
+const [from, to] = args.filter(a => !a.startsWith('--') && !a.startsWith('+')).map(Number);
+const S = makeSigma({
+  levels: args.includes('--k2') ? [1, 2] : [1],
+  low: args.includes('--low'),
+  eorig: args.includes('--eorig'),
+  r2nu: false,   // R2nu は +R2nu で RULES に直接入れる
+});
+const tcs = t => off ? B.tcToString(X.iota(t), false) : S.tcOf(t);
+
 const rows = JSON.parse(fs.readFileSync(path.join(ROOT, 'sheet/bms_rows.json'), 'utf8'));
 const items = [];
-for (let i = from; i <= to; i++) {
+for (let i = from; i <= to && i < rows.length; i++) {
   const [sheet, b, u] = rows[i];
   if (sheet !== 'To psi(I)' || !b.startsWith('(') || b.split(')')[0].split(',').length !== 3) continue;
   const it = { idx: i, label: u };
@@ -168,5 +81,10 @@ for (const it of items) {
   if (it.order && it.order !== '-1') { cnt.orderbad++; codes.push('order' + it.order); }
   if (codes.length) bad.push(`${it.idx} ${codes.join(',')} ${it.label}`);
 }
-console.log(off ? 'baseline' : 'sigma2', JSON.stringify(cnt));
+console.log(off ? 'baseline' : 'sigma', JSON.stringify(cnt));
+const ji = args.indexOf('--json');
+if (ji >= 0) fs.writeFileSync(args[ji + 1], JSON.stringify(items.map(it => ({
+  idx: it.idx, label: it.label, tc: it.tc, err: it.err, std: it.std, apStd: it.apStd,
+  supOk: it.ap ? it.sup === it.tc : null, order: it.order,
+})), null, 1));
 for (const l of bad.slice(0, 70)) console.log('  ' + l.slice(0, 150));
