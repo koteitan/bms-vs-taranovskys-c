@@ -383,4 +383,63 @@ def supCandidate (β : T) : Option T :=
   let β' := toN n β
   (minAboveN n β' (L β')).map toCombined
 
+/-- 2 つの post 列の共通接頭辞の長さ。 -/
+def lcpLen : List Sym → List Sym → Nat
+  | x :: xs, y :: ys => if Sym.cmp x y == .eq then lcpLen xs ys + 1 else 0
+  | _, _ => 0
+
+/-- n 番目の系で、post 列 `syms` のある位置 p < `lim` において `syms[p]` より大きい記号に
+分かれる標準項（C の個数 ≤ m）の最小値。p が大きいほど項は小さいので p は大きい方から探す。 -/
+def minDeviateAboveN (n : Nat) (syms : Array Sym) (lim m : Nat) : Option T := Id.run do
+  let maxLeaves := m + 1
+  let maxLen := 2 * maxLeaves - 1
+  let states := prefixStates syms.toList
+  for i in [0:lim] do
+    let p := lim - 1 - i
+    let st := states[p]!
+    if p + 1 > maxLen then continue
+    let fuel := maxLen - p
+    let cands : List Sym := match syms[p]! with
+      | .c => [.z, .w n]
+      | .z => [.w n]
+      | .w _ => []
+    for s in cands do
+      let st' : Option St := match s with
+        | .z => pushLeaf n maxLeaves fuel st .zero
+        | .w k => pushLeaf n maxLeaves fuel st (.W k)
+        | .c => pushC st
+      match st' >>= completeMin n maxLeaves (fuel - 1) with
+      | some t => return some t
+      | none => pure ()
+  return none
+
+/-- 増加列 `ts`（結合系の項）の上限: 各項の post 列の共通接頭辞 s について、
+s のある位置で s より大きい記号に分かれる標準項の最小値。
+`ts` が上限 σ に収束する列の十分先の項なら、共通接頭辞は σ の直前まで伸びるので σ を返す。
+C の個数は `ts` の最大値 + `extra` まで探す。 -/
+def supSeqIn (n : Nat) (ts : List T) (extra : Nat := 0) : Option T :=
+  match ts with
+  | [] => none
+  | _ :: _ =>
+    let ps := ts.map fun t => post (toN n t)
+    let p0 := ps.head!
+    let lim := ps.foldl (fun acc p => min acc (lcpLen p0 p)) p0.length
+    let m := ts.foldl (fun acc t => max acc (L (toN n t))) 0
+    (minDeviateAboveN n p0.toArray lim (m + extra)).map toCombined
+
+def supSeq (ts : List T) (extra : Nat := 0) : Option T :=
+  supSeqIn (ts.foldl (fun acc t => max acc (systemOf t)) 1) ts extra
+
+/-- `supSeqIn` を系 n, n+1, n+2 の順に試す（n = 列の項の系の最大）。
+上限が系からはみ出すと、その系での最小の上界は素の `W_k` になるので、そのときは次の系で探し直す。
+例: (0,0)(1,1)(2,1)(3,1)… の像は第 1 系の項で、第 1 系での最小の上界は W だが、上限は C(C(W_2,W),0)。 -/
+def supSeqAuto (ts : List T) : Option T := Id.run do
+  let n0 := ts.foldl (fun acc t => max acc (systemOf t)) 1
+  for d in [0:3] do
+    match supSeqIn (n0 + d) ts with
+    | some (.W _) => pure ()
+    | some t => return some t
+    | none => pure ()
+  return none
+
 end TC

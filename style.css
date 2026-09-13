@@ -37,6 +37,7 @@ header {
   border-bottom: 1px solid var(--border);
 }
 h1 { font-size: 1.25rem; margin: 0; }
+.version { font-size: 0.8rem; font-weight: normal; color: var(--muted); }
 h2 { font-size: 1rem; margin: 18px 0 6px; }
 
 .menu { position: relative; }

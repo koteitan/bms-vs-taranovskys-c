@@ -468,6 +468,45 @@ function splitHigh(a, nu) {
   return [mkSum(ts.filter(q => nuOf(q) > nu)), mkSum(ts.filter(q => nuOf(q) <= nu))];
 }
 
+// 実験用の規則スイッチ（tools/rule_lab.js が書き換える）。既定はすべて false = 現行規則。
+const RULES = { N1: false, N1exp: false, N2: false, N2exp: false };
+
+// N2: ν ≥ 2、a の項がすべて高さ ≤ ν のとき、Ω̂_ν + a = chain(a, Ω̂_ν) の「最後の項を高さ ν のまま
+// たどった先の ψ_ν(0) の指数 Ω̂_ν」を E に置き換える。たどれなければ null。
+function chainRP(a, nu, E) {
+  const ts = termsOf(a);
+  if (ts.length === 0) return null;
+  const last = ts[ts.length - 1];
+  if (!isObj(last) || last.nu !== nu) return null;
+  const init = chain(mkSum(ts.slice(0, -1)), omegaHat(nu));
+  let e;
+  if (last.a === 0) e = E;
+  else {
+    const [h] = splitHigh(last.a, nu);
+    if (h !== 0) return null;
+    e = chainRP(last.a, nu, E);
+    if (e === null) return null;
+  }
+  return C(e, init);
+}
+
+function levelChain2(nu, a) {
+  if (nu < 2) return null;
+  const E = Cn(chain(a, omegaHat(nu)), omegaHat(nu - 1));
+  return chainRP(a, nu, E);
+}
+
+// N1: ν ≥ 2 で a の最後の項が高さ ν のとき、その項の指数を ψ̂_{ν-1}(ψ_ν(a)) にした Ω̂_ν + a。
+function levelChain(nu, a) {
+  const ts = termsOf(a);
+  const last = ts[ts.length - 1];
+  if (nu >= 2 && isObj(last) && last.nu === nu) {
+    const init = chain(mkSum(ts.slice(0, -1)), omegaHat(nu));
+    return C(iota(D(nu - 1, D(nu, a))), init);
+  }
+  return null;
+}
+
 function expT(p) {
   if (!isObj(p)) return iota(p);
   const nu = p.nu, a = p.a;
@@ -475,6 +514,8 @@ function expT(p) {
   if (high === 0) {
     if (nu === 0) return iota(a);
     if (a === 0) return omegaHat(nu);
+    if (RULES.N1exp) { const lc = levelChain(nu, a); if (lc) return lc; }
+    if (RULES.N2exp) { const lc = levelChain2(nu, a); if (lc) return lc; }
     return chain(a, omegaHat(nu));
   }
   if (low !== 0) return chain(low, iota(D(nu, high)));
@@ -499,6 +540,8 @@ function iota(t) {
   if (high === 0) {
     if (nu === 0) return C(iota(a), Z);
     if (a === 0) return omegaHat(nu);
+    if (RULES.N1) { const lc = levelChain(nu, a); if (lc) return C(lc, omegaHat(nu)); }
+    if (RULES.N2) { const lc = levelChain2(nu, a); if (lc) return C(lc, omegaHat(nu)); }
     return C(chain(a, omegaHat(nu)), omegaHat(nu));
   }
   if (low !== 0) {
@@ -566,7 +609,7 @@ function translate(s, opts) {
   }
 }
 
-const api = { Z, W, C, cmp, tcToString, prss, transPS, btToString, iota, parseBms, stripZeroRows, bms2tc, translate };
+const api = { RULES, Z, W, C, cmp, tcToString, prss, transPS, btToString, iota, parseBms, stripZeroRows, bms2tc, translate };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 else root.Bms2tc = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
