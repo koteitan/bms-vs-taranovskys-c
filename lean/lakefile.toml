@@ -1,0 +1,10 @@
+name = "bmstc"
+defaultTargets = ["BmsTc", "bms2tc"]
+
+[[lean_lib]]
+name = "BmsTc"
+roots = ["BmsTc"]
+
+[[lean_exe]]
+name = "bms2tc"
+root = "Main"

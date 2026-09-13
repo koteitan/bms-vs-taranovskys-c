@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Translation of BMS to Taranovsky's C</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Translation of BMS to Taranovsky's C</h1>
+  <div class="menu">
+    <button id="menu-btn" class="menu-btn" aria-label="menu" aria-expanded="false">&#9776;</button>
+    <div id="menu-panel" class="menu-panel" hidden>
+      <label><input type="checkbox" id="opt-dark"> dark mode</label>
+      <label><input type="checkbox" id="opt-omega"> Ω_n notation (off: W, W_2, …)</label>
+      <a href="https://github.com/koteitan/bms-vs-taranovskys-c">source (GitHub)</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="panes">
+    <div class="pane">
+      <label for="bms">BMS</label>
+      <textarea id="bms" spellcheck="false" placeholder="(0,0)(1,1)(2,2)&#10;(0)(1)(2)&#10;1 行 1 行列 / one matrix per line"></textarea>
+    </div>
+    <div class="arrow">&rarr;</div>
+    <div class="pane">
+      <label for="tc">Taranovsky's C</label>
+      <textarea id="tc" spellcheck="false" readonly></textarea>
+    </div>
+  </div>
+
+  <section class="notes">
+    <h2>対応範囲 / Limits</h2>
+    <ul>
+      <li>(0,0,0)(1,1,1) 未満、つまり 1 行・2 行の行列のみ。3 行以上は未対応です。<br>
+          Below (0,0,0)(1,1,1): matrices with 1 or 2 rows only. 3 rows and more are not supported.</li>
+      <li>2 行のうち、3 列目以降に Ω_2 に対応する項が 2 個以上重なる行列（例 (0,0)(1,1)(2,2)(3,3)(3,3)）は
+          翻訳規則が未検証で、結果が非標準形になることがあります。<br>
+          For 2-row matrices where two or more Ω_2-level terms stack (e.g. (0,0)(1,1)(2,2)(3,3)(3,3)),
+          the rule is unverified and the output may be non-standard.</li>
+      <li>標準形の行列を想定しています。非標準形の入力の結果は保証しません。<br>
+          Standard matrices are assumed; results for non-standard input are not guaranteed.</li>
+    </ul>
+    <h2>入力 / Input</h2>
+    <ul>
+      <li>1 行に 1 行列。複数行はまとめて変換されます。/ One matrix per line; all lines are translated.</li>
+      <li><code>(),0-9</code> 以外の文字は無視されます。/ Characters other than <code>(),0-9</code> are ignored.</li>
+      <li>列の高さが違うときは最大の列に合わせて 0 を詰めます: (0)(1,1) → (0,0)(1,1)。<br>
+          Shorter columns are padded with 0 to the tallest column.</li>
+      <li>入力は URL の <code>?bms=</code> に反映されます。/ The input is mirrored to the URL query <code>?bms=</code>.</li>
+    </ul>
+    <h2>記法 / Notation</h2>
+    <p>Taranovsky's C（main system, 結合系）。項は <code>0</code>, <code>Ω_n</code>, <code>C(a,b)</code>。
+       Ω_1 = Ω。BMS は BM4。<br>
+       Taranovsky's C (main system, combined). Terms: <code>0</code>, <code>Ω_n</code>, <code>C(a,b)</code>. Ω_1 = Ω. BMS is BM4.</p>
+    <p>1 行: C(a,b) = b + ω^a の 0 番目の系。2 行: ペア数列 → Buchholz の表記 → C。
+       規則の詳細と検証は <a href="https://github.com/koteitan/bms-vs-taranovskys-c">リポジトリ</a>を参照。<br>
+       1 row: the 0-th system with C(a,b) = b + ω^a. 2 rows: pair sequence → Buchholz's notation → C.
+       See the <a href="https://github.com/koteitan/bms-vs-taranovskys-c">repository</a> for the rules and their verification.</p>
+  </section>
+</main>
+
+<script src="bms2tc.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

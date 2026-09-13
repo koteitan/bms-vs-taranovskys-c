@@ -1,0 +1,6 @@
+lean/.lake/
+__pycache__/
+*.pyc
+# 収集した外部資料（refs/README.md の索引のみ管理する）
+refs/*
+!refs/README.md

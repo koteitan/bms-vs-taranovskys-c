@@ -1,0 +1,3 @@
+#!/bin/sh
+# BMS → Taranovsky's C.   usage: ./bms2tc "(0,0,0)(1,1,1)"   (other subcommands: see ../lean/Main.lean)
+exec "$(dirname "$0")/../lean/.lake/build/bin/bms2tc" "$@"
