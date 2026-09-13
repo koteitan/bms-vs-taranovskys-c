@@ -35,6 +35,7 @@ const S = makeSigma({
   levels: args.includes('--auto') ? 'auto' : args.includes('--k2') ? [1, 2] : [1],
   low: args.includes('--low'),
   normAll: args.includes('--normall'),
+  virtual: args.includes('--virtual'),
   eorig: args.includes('--eorig'),
   r2nu: false,   // R2nu は +R2nu で RULES に直接入れる
 });
@@ -61,6 +62,7 @@ items.forEach((it, k) => {
   if (it.ap) {
     it.apStd = true;
     it.ap.forEach(a => ask(`std ${a}`, r => { if (r !== '1') it.apStd = false; }));
+    it.ap.forEach(a => ask(`cmp ${a} ${it.tc}`, r => { if (r !== '-1') it.notBelow = true; }));
     ask(`supseq ${it.ap.join(' ')}`, r => { it.sup = r; });
   }
   const nx = items[k + 1];
@@ -73,6 +75,7 @@ for (const it of items) {
   if (it.err) { cnt.err++; continue; }
   const codes = [];
   if (!it.std) { cnt.nonstd++; codes.push('nonstd'); }
+  if (it.notBelow) { cnt.notbelow = (cnt.notbelow || 0) + 1; codes.push('not-below'); }
   if (it.ap) {
     const ok = it.sup === it.tc;
     if (it.apStd && !ok) { cnt.supbad++; codes.push('SUP≠'); }
@@ -86,6 +89,6 @@ console.log(off ? 'baseline' : 'sigma', JSON.stringify(cnt));
 const ji = args.indexOf('--json');
 if (ji >= 0) fs.writeFileSync(args[ji + 1], JSON.stringify(items.map(it => ({
   idx: it.idx, label: it.label, tc: it.tc, err: it.err, std: it.std, apStd: it.apStd,
-  supOk: it.ap ? it.sup === it.tc : null, order: it.order,
+  supOk: it.ap ? it.sup === it.tc : null, order: it.order, notBelow: !!it.notBelow,
 })), null, 1));
 for (const l of bad.slice(0, 70)) console.log('  ' + l.slice(0, 150));

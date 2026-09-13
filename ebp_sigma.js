@@ -10,6 +10,9 @@
 //   λ(b): b の先頭の Ω_{Ω_{κ+1}} を落とし、残りの大きい項 y_m を Ω_{ψ_κ(b_{≤m})} に置き換えた和
 //         （y の浅い位置の Ω_m（m ≥ 2 の後続、段より下）を ψ_{m-1}(y) に置き換えてから）
 //   - 中の可算の崩壊 ψ_0(..) にも同じ σ を当てる
+// 先頭 H が段 κ より大きい項（添字は Ω_{Ω_{κ+1}} 未満）のときは、H を「1 つ目の Ω_{Ω_{κ+1}}」とみなし、
+//   後ろの段 κ の項をすべて 2 つ目以降として変換し、ψ_κ(H + Z) は H を Ω_{Ω_{κ+1}} に下げてから変換する
+//   （例 ψ_0(Ω_{Ω_3}+Ω_{Ω_2}) ↦ ψ_0(Ω_{Ω_3}+Ω_{ψ_2(Ω_{ψ_1(Ω_{Ω_2}·2)})})）
 // 最後の低い項 ψ_μ(b) が R2n の形なら、その E = ψ̂_{μ-1}(a) は σ の前の引数 a から作る。
 // ψ_ν（ν ≥ 1）の中の R2n 型の置き換え（ebp2tc.js の R2nu）は、σ の像の翻訳のときだけ有効にする。
 //
@@ -42,7 +45,8 @@ function autoLevels(q) {
 }
 
 // opts: levels（[1, 2] のような段の並び、または 'auto'＝先頭の項から段を読む。既定 'auto'）,
-//       normAll（段より下の Ω_m も E で置き換える、既定 true）, low（低い崩壊の引数にも当てる、既定 false）,
+//       normAll（段より下の Ω_m も E で置き換える、既定 true）, virtual（大きい先頭を 1 つ目とみなす、既定 true）,
+//       low（低い崩壊の引数にも当てる、既定 false）,
 //       eorig（最後の低い項の E を σ の前の引数から作る、既定 true）, r2nu（既定 true）
 function makeSigma(opts = {}) {
   const LEVELS = (opts.levels || 'auto') === 'auto' ? null : opts.levels.map(level);
@@ -90,31 +94,46 @@ function makeSigma(opts = {}) {
     });
     return sum(out);
   }
-  function slot(L, s) {
+  // virtual（実験）: 先頭 H が段 κ より大きい項のとき、H を「1 つ目の Ω_{Ω_{κ+1}}」とみなす。
+  //   後ろの段 κ の項はすべて 2 つ目以降として変換し、ψ_κ(H + Z) は H を Ω_{Ω_{κ+1}} に下げてから変換する
+  const VIRTUAL = opts.virtual !== false;
+  function lowerH(L, H, t) {
+    let out = 0;
+    for (const p of terms(t)) {
+      if (p.a !== 0 && eq(p.i, L.CUR) && eq(terms(p.a)[0], H)) out = add(out, P(p.i, add(L.OO, lowerH(L, H, mk(terms(p.a).slice(1))))));
+      else out = add(out, P(p.i === 0 ? 0 : lowerH(L, H, p.i), p.a === 0 ? 0 : lowerH(L, H, p.a)));
+    }
+    return out;
+  }
+  function slot(L, s, H) {
     if (cmp(s, L.ETA) < 0) return s;
-    if (eq(s.i, L.CUR) && terms(s.a).length && isBig(L, terms(s.a)[0])) return P(L.NEXT, lam(L, s.a));
+    if (!eq(s.i, L.CUR) || !terms(s.a).length) return s;
+    const a0 = terms(s.a)[0];
+    if (H && eq(a0, H)) return P(L.NEXT, lam(L, add(L.OO, lowerH(L, H, mk(terms(s.a).slice(1))))));
+    if (isBig(L, a0)) return P(L.NEXT, lam(L, s.a));
     return s;
   }
-  function argT(L, xs) {
+  function argT(L, xs, H) {
     const out = [];
     let first = -1;   // 最初の段 κ の項の位置
     for (let j = 0; j < xs.length; j++) {
       const q = xs[j];
       if (isO(L, q)) {
         if (first < 0) first = j;
-        if (j === first && eq(q, L.OO)) out.push(q);
+        if (!H && j === first && eq(q, L.OO)) out.push(q);
         else {
-          const seg = xs.slice(first, j + 1);
-          const pre = eq(seg[0], L.OO) ? seg : [L.OO, ...seg];
+          // 仮想の先頭のときは先頭の直後からの項（近似列の ψ_κ(H + ..) の引数とそろえる）
+          const seg = H ? xs.slice(1, j + 1) : xs.slice(first, j + 1);
+          const pre = (!H && eq(seg[0], L.OO)) ? seg : [L.OO, ...(H ? seg.map(y => lowerH(L, H, y)) : seg)];
           out.push(P(P(L.NEXT, lam(L, sum(pre))), 0));
         }
         continue;
       }
       const n = natValue(q.i);
-      if (n === 0) { out.push(q); continue; }
-      const a = (LOW && q.a !== 0) ? argT(L, terms(q.a)) : q.a;
+      if (n === 0 || (H && j === 0)) { out.push(q); continue; }
+      const a = (LOW && q.a !== 0) ? argT(L, terms(q.a), H) : q.a;
       if (n !== null) { out.push(P(q.i, a)); continue; }
-      out.push(P(sum(terms(q.i).map(s => slot(L, s))), a));
+      out.push(P(sum(terms(q.i).map(s => slot(L, s, H))), a));
     }
     return sum(out);
   }
@@ -122,9 +141,29 @@ function makeSigma(opts = {}) {
     if (t.a === 0) return t;
     let xs = terms(fixAll(t.a));
     if (!xs.length) return t;
-    for (const L of (LEVELS || autoLevels(xs[0]))) {
-      if (!LOW && (!isO(L, xs[0]) || (xs.length === 1 && eq(xs[0], L.OO)))) continue;
+    const head = xs[0];
+    for (const L of (LEVELS || autoLevels(head))) {
+      if (!LOW && (!isO(L, head) || (xs.length === 1 && eq(head, L.OO)))) continue;
       xs = terms(argT(L, xs));
+    }
+    if (VIRTUAL && xs.length > 1) {
+      // 後ろの項の段と、添字の崩壊 ψ_κ(H + ..) の段（先頭 H より小さい段だけ）
+      const seen = [];
+      for (const q of xs.slice(1)) {
+        const cand = [...autoLevels(q)];
+        if (q !== 0 && !Array.isArray(q)) for (const s of terms(q.i)) {
+          if (s.a !== 0 && eq(terms(s.a)[0], head) && natValue(s.i) !== 0) cand.push(level(s.i));
+        }
+        for (const L of cand) {
+          if (seen.some(M => eq(M.CUR, L.CUR))) continue;
+          if (!isBig(L, head) || isO(L, head)) continue;
+          if (cmp(head.i, L.OO) >= 0) continue;   // 先頭の添字自体が段 κ の大きい項（Ω_{Ω_{Ω_2}} など）なら当てない
+          // 先頭のあとにも段 κ より大きい項が続く（Ω_{Ω_ω}·2 + Ω_{Ω_2} など）なら当てない（形が未確認）
+          if (xs.slice(1).some(y => isBig(L, y) && !isO(L, y) && !(y.i && terms(y.i).some(s => s.a !== 0 && eq(terms(s.a)[0], head))))) continue;
+          seen.push(L);
+        }
+      }
+      for (const L of seen) xs = terms(argT(L, xs, head));
     }
     return P(0, mk(xs));
   }

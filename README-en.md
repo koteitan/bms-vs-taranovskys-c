@@ -74,7 +74,8 @@ BM4. `M[n]` follows the yaBMS convention (append n copies of the bad part; `M[0]
   images above them drift. The translation is therefore f = ι∘σ, where σ (`ebp_sigma.js`) first sends the term order-preservingly
   to terms ι can handle: ψ_1(Ω_{Ω_2}+Y) in a subscript ↦ ψ_2(Y'), a later Ω_{Ω_2}-level term ↦ Ω_{ψ_2(…)}. The level κ is read from
   the subscript Ω_{κ+1} of the leading term of the argument, and the same rules apply to finite levels (Ω_{Ω_3}, …) and transfinite
-  ones (Ω_{Ω_{ω+1}}, Ω_{Ω_{Ω+1}}, …) (e.g. ψ_0(Ω_{Ω_2}·2) ↦ ι(ψ_0(Ω_{ψ_2(Ω_{ψ_1(Ω_{Ω_2}·2)})}))).
+  ones (Ω_{Ω_{ω+1}}, Ω_{Ω_{Ω+1}}, …) (e.g. ψ_0(Ω_{Ω_2}·2) ↦ ι(ψ_0(Ω_{ψ_2(Ω_{ψ_1(Ω_{Ω_2}·2)})}))). When the leading term is bigger,
+  it acts as the first Ω_{Ω_{κ+1}} (e.g. ψ_0(Ω_{Ω_3}+Ω_{Ω_2}) ↦ ψ_0(Ω_{Ω_3}+Ω_{ψ_2(Ω_{ψ_1(Ω_{Ω_2}·2)})})).
 - 4 rows and more: not supported.
 
 Range: 1 and 2 rows, plus the 3-row rows present in the sheet (up to ψ(I)).
@@ -123,11 +124,11 @@ See the summary in `sheet/README-en.md`.
 
 - 2 rows: with rules N2, R2n, R2g, R1d, R2x, R2k and CnAll, all 313 limits in `tools/rule_lab.js` (sheet rows and sampled expansions)
   pass the checks (sup match, above the approximants, standard form).
-- 3 rows: 4492 of the 4503 sheet rows raise nothing in `tools/ebp_lab.js` (translation f = ι∘σ).
+- 3 rows: 4493 of the 4503 sheet rows raise nothing in `tools/ebp_lab.js` (translation f = ι∘σ).
   Flagged rows: 48 rows whose label order is reversed against the BMS order, non-normal labels, and a few others.
 - Effect of σ: the approximants of row 2574 ψ_0(Ω_{Ω_2}+Ω_{ψ_1(Ω_{Ω_2})}) have a sup equal to the ι-only image of ψ_0(Ω_{Ω_2}·2),
   so the images above it had drifted. With σ the images of 210 rows (2574–2795) change and no row gets worse (`tools/sigma_lab.js`).
-- Open: 132 rows pass the checks but some approximants are non-standard, so the sup check is weak there (214 with ι alone):
-  Ω_{Ω_k} inside the argument of a lower collapse (e.g. ψ_0(Ω_{Ω_2}+ψ_2(Ω_{Ω_2})), ψ_0(Ω_{Ω_ω}+ψ_ω(Ω_{Ω_2}))), ψ_0(Ω_{Ω_3}+Ω_{Ω_2}), etc.
+- Open: 108 rows pass the checks but some approximants are non-standard, so the sup check is weak there (214 with ι alone):
+  Ω_{Ω_k} inside the argument of a lower collapse (e.g. ψ_0(Ω_{Ω_2}+ψ_2(Ω_{Ω_2})), ψ_0(Ω_{Ω_ω}+ψ_ω(Ω_{Ω_2}))), etc.
 - ψ(I) = (0,0,0)(1,1,1)(2,1,1)(3,1,0)(2,0,0) ↦ C(C(C(Ω_2,Ω_2),0),0).
   `tools/psi_i_sup.js` checks that the sup of the images of ψ_0(Ω_{Ω_{…Ω}}) is this term.
