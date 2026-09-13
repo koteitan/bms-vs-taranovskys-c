@@ -110,9 +110,9 @@ segment, hence unique. The checks above test this property on finitely many α; 
 
 See the summary in `sheet/README-en.md`.
 
-- 2 rows: with rule R2n, 303 of the 313 limits in `tools/rule_lab.js` (sheet rows and sampled expansions) pass the checks
-  (sup match, above the approximants, standard form). The rest are nested forms such as ψ_0(Ω_3 + ψ_2(Ω_3 + ψ_2(Ω_3 + ψ_2(Ω_2)))).
-- 3 rows: 4484 rows via the sheet's labels (including the ψ(I) row); 4452 raise nothing in `tools/ebp_lab.js`.
-  Flagged rows include the form ψ_0(α' + ψ_μ(α')), the analogous form inside ψ_1, and 48 rows whose label order is reversed against the BMS order.
+- 2 rows: with rules R2n, R2g and R1d, 309 of the 313 limits in `tools/rule_lab.js` (sheet rows and sampled expansions) pass the checks
+  (sup match, above the approximants, standard form), and no failure has standard approximants.
+- 3 rows: 4484 rows via the sheet's labels (including the ψ(I) row); 4478 raise nothing in `tools/ebp_lab.js`.
+  Flagged rows include the form where the last term inside ψ_ω is Ω_{ω+k}, subscripts containing ψ, and 48 rows whose label order is reversed against the BMS order.
 - ψ(I) = (0,0,0)(1,1,1)(2,1,1)(3,1,0)(2,0,0) ↦ C(C(C(Ω_2,Ω_2),0),0).
   `tools/psi_i_sup.js` checks that the sup of the images of ψ_0(Ω_{Ω_{…Ω}}) is this term.

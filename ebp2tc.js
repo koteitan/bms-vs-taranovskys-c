@@ -13,7 +13,30 @@ const { ONE, P, terms, mk, nat, natValue, cmp, succ, pred, splitHigh, logP } = E
 
 const tcmp = B.cmp;
 // 実験用の規則スイッチ（tools/ebp_lab.js が書き換える）
-const RULES = { R2p: false, R2s: false, R2c: false, R2e: false, R2u: false, R2z: false, R2n: true, R2h: false, R1d: false, R2g: false };
+const RULES = { R2p: false, R2s: false, R2c: false, R2e: false, R2u: false, R2z: false, R2n: true, R2h: false, R1d: true, R2g: true, R2x: false, R2k: false, CnAll: false };
+
+// R2x（実験）: q = ψ_μ(b) で b の項がすべて添字 > μ・2 項以上、最後の項 q2 の段 m が後続で m ≥ μ+2 のとき、
+//   log q = ι(q) = C(ι(b), Ω̂_μ) の ι(b) で、q2 について E = ψ̂_{m-1}(b) の置き換え（R1d と同じ）をしたもの。
+//   当てはまらなければ null。
+function r2xExp(mu, b) {
+  const [hq, lq] = splitHigh(b, mu);
+  if (hq === 0 || lq !== 0) return null;
+  const bts = terms(b);
+  if (bts.length < 2) return null;
+  const q2 = bts[bts.length - 1];
+  const m = q2.i, mp = pred(m);
+  if (mp === null || cmp(m, succ(succ(mu))) < 0) return null;
+  const binit = mk(bts.slice(0, -1));
+  const E2 = iota(P(mp, b));
+  let deg;
+  if (q2.a === 0) deg = Cn(E2, iota(binit));
+  else {
+    const r = expRP(q2, m, E2);
+    if (r === null) return null;
+    deg = C(r, iota(binit));
+  }
+  return C(deg, baseOf(mu));
+}
 
 // R2g（実験）: 段 μ の素の Ω_μ への「右端の道」をたどり、その指数を E に置き換える一般形。
 // 道は段 ≥ μ の項だけを通り、expT / ι / chain の計算の形をなぞる。null = 置き換えなし。
@@ -106,7 +129,8 @@ function omegaHat(i) {
 const baseOf = nu => (nu === 0 ? Z : omegaHat(nu));
 
 function chain(a, t) {
-  for (const q of terms(a)) t = C(expT(q), t);
+  // CnAll（実験）: C の代わりに第 2 引数の最小化つきの Cn（値は変わらず標準形に近づく）
+  for (const q of terms(a)) t = RULES.CnAll ? Cn(expT(q), t) : C(expT(q), t);
   return t;
 }
 
@@ -164,7 +188,7 @@ function iota(t) {
   if (ts.length === 0) return Z;
   if (ts.length > 1) {
     let r = iota(ts[0]);
-    for (const q of ts.slice(1)) r = C(expT(q), r);
+    for (const q of ts.slice(1)) r = RULES.CnAll ? Cn(expT(q), r) : C(expT(q), r);
     return r;
   }
   const nu = t.i, a = t.a;
@@ -200,7 +224,10 @@ function iota(t) {
         const binit = mk(bts.slice(0, -1));
         const E2 = iota(P(mp2, b));
         if (q2.a === 0) degree = Cn(E2, iota(binit));
-        else {
+        else if (RULES.R2g) {
+          const r = expRP(q2, m2, E2);
+          if (r) degree = C(r, iota(binit));
+        } else {
           const [h2, l2] = splitHigh(q2.a, m2);
           let ex2 = null;
           if (h2 === 0) ex2 = chainRPBase(q2.a, m2, E2, omegaHat(m2));
@@ -222,9 +249,20 @@ function iota(t) {
     //   「最後の段 μ の項をたどった先の指数」を E = ψ̂_{μ-1}(a) に置き換えたものにする（b = 0 なら E そのもの）
     if (RULES.R2n) {
       const mpn = pred(mu);
-      if (mpn === null) return C(iota(a), Z);
+      // R2g で置き換えがないとき（μ が極限のときも）R2x を試し、それもなければ和の規則
+      const r2x = () => {
+        const x2 = RULES.R2x ? r2xExp(mu, b) : null;
+        return x2 === null ? C(iota(a), Z) : C(C(x2, iota(aprime)), Z);
+      };
+      if (mpn === null) return r2x();
       const En = iota(P(mpn, a));
       if (b === 0) return C(Cn(En, iota(aprime)), Z);
+      if (RULES.R2g) {
+        const exg = expRP(last, mu, En);
+        // R2k（実験）: 基点 ι(α') を第 2 引数の最小化で縮める
+        if (exg !== null && RULES.R2k) return C(Cn(exg, iota(aprime)), Z);
+        return exg === null ? r2x() : C(C(exg, iota(aprime)), Z);
+      }
       const [hq, lq] = splitHigh(b, mu);
       let ex = null;
       if (hq === 0) ex = chainRPBase(b, mu, En, omegaHat(mu));

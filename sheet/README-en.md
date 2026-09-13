@@ -19,13 +19,13 @@ All 20802 rows including the untranslated ones: [table.tsv](table.tsv).
 
 | sheet | verified | rule (unverified) | via label | via label (flagged) | untranslated |
 |---|---|---|---|---|---|
-| To psi(I) | 261 | 4 | 4404 | 88 | 11 |
+| To psi(I) | 261 | 4 | 4430 | 62 | 11 |
 | To psi(W(2,0)) | 0 | 0 | 1 | 0 | 3788 |
 | To psi(W_(M+1)) | 0 | 0 | 0 | 0 | 4678 |
 | To psi(N) | 0 | 0 | 0 | 0 | 3668 |
 | To psi(K) | 0 | 0 | 0 | 0 | 3722 |
 | To psi(e(K+1)) | 0 | 0 | 0 | 0 | 177 |
-| **total** | **261** | **4** | **4405** | **88** | **16044** |
+| **total** | **261** | **4** | **4431** | **62** | **16044** |
 
 ## 3-row rows (via label)
 

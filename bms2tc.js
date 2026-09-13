@@ -469,7 +469,7 @@ function splitHigh(a, nu) {
 }
 
 // 規則スイッチ（tools/rule_lab.js が書き換える）。N2 は採用済み（Lean / Python と同じ）、他は実験中。
-const RULES = { N1: false, N1exp: false, N2: true, N2exp: false, R2p: false, R2s: false, R2e: false, R2u: false, R2z: false, R2n: true, R2h: false, R1d: false };
+const RULES = { N1: false, N1exp: false, N2: true, N2exp: false, R2p: false, R2s: false, R2e: false, R2u: false, R2z: false, R2n: true, R2h: false, R1d: true, R2g: true, R2x: false, R2k: false, CnAll: false };
 
 // N2: ν ≥ 2、a の項がすべて高さ ≤ ν のとき、Ω̂_ν + a = chain(a, Ω̂_ν) の「最後の項を高さ ν のまま
 // たどった先の ψ_ν(0) の指数 Ω̂_ν」を E に置き換える。たどれなければ null。
@@ -523,7 +523,8 @@ function expT(p) {
 }
 
 function chain(a, t) {
-  for (const q of termsOf(a)) t = C(expT(q), t);
+  // CnAll（実験）: C の代わりに第 2 引数の最小化つきの Cn
+  for (const q of termsOf(a)) t = RULES.CnAll ? Cn(expT(q), t) : C(expT(q), t);
   return t;
 }
 
@@ -532,7 +533,7 @@ function iota(t) {
   if (isArr(t)) {
     if (t.length === 0) return Z;
     let r = iota(t[0]);
-    for (const q of t.slice(1)) r = C(expT(q), r);
+    for (const q of t.slice(1)) r = RULES.CnAll ? Cn(expT(q), r) : C(expT(q), r);
     return r;
   }
   const nu = t.nu, a = t.a;
@@ -565,7 +566,10 @@ function iota(t) {
         const binit = mkSum(bts.slice(0, -1));
         const E2 = iota(D(m2 - 1, b));
         if (q2.a === 0) degree = Cn(E2, iota(binit));
-        else {
+        else if (RULES.R2g) {
+          const r = expRP(q2, m2, E2);
+          if (r) degree = C(r, iota(binit));
+        } else {
           const [h2, l2] = splitHigh(q2.a, m2);
           let ex2 = null;
           if (h2 === 0) ex2 = chainRPBase(q2.a, m2, E2, omegaHat(m2));
@@ -582,6 +586,29 @@ function iota(t) {
     if (RULES.R2n) {
       const En = iota(D(mu - 1, a));
       if (b === 0) return C(Cn(En, iota(aprime)), Z);
+      if (RULES.R2g) {
+        const exg = expRP(last, mu, En);
+        // R2k（実験）: 基点 ι(α') を第 2 引数の最小化で縮める
+        if (exg !== null) return RULES.R2k ? C(Cn(exg, iota(aprime)), Z) : C(C(exg, iota(aprime)), Z);
+        // R2x（実験）: ebp2tc.js の r2xExp と同じ（段は有限）
+        if (RULES.R2x) {
+          const [hq2, lq2] = splitHigh(b, mu);
+          const bts2 = termsOf(b);
+          const q2 = bts2[bts2.length - 1];
+          if (hq2 !== 0 && lq2 === 0 && bts2.length >= 2 && isObj(q2) && q2.nu >= mu + 2) {
+            const binit = mkSum(bts2.slice(0, -1));
+            const E2 = iota(D(q2.nu - 1, b));
+            let deg = null;
+            if (q2.a === 0) deg = Cn(E2, iota(binit));
+            else {
+              const r = expRP(q2, q2.nu, E2);
+              if (r !== null) deg = C(r, iota(binit));
+            }
+            if (deg !== null) return C(C(C(deg, omegaHat(mu)), iota(aprime)), Z);
+          }
+        }
+        return C(iota(a), Z);
+      }
       const [hq, lq] = splitHigh(b, mu);
       let ex = null;
       if (hq === 0) ex = chainRPBase(b, mu, En, omegaHat(mu));
@@ -653,6 +680,61 @@ function iota(t) {
     return C(C(iota(D(RULES.R2p ? mu - 1 : 1, a)), iota(aprime)), Z);
   }
   return C(iota(a), baseOf(nu));
+}
+
+// R2g（実験）: ebp2tc.js の expRP / chainRP2 / iotaRP / iotaRPsum と同じ（段は有限）
+function expRP(p, mu, E) {
+  if (!isObj(p) || p.nu < mu) return null;
+  if (p.a === 0) return p.nu === mu ? E : null;
+  const [h, l] = splitHigh(p.a, p.nu);
+  if (h === 0) {
+    if (p.nu === 0) return null;
+    return chainRP2(p.a, mu, E, omegaHat(p.nu));
+  }
+  if (l !== 0) return chainRP2(l, mu, E, iota(D(p.nu, h)));
+  return iotaRP(p, mu, E);
+}
+function chainRP2(a, mu, E, base) {
+  const ts = termsOf(a);
+  if (ts.length === 0) return null;
+  const r = expRP(ts[ts.length - 1], mu, E);
+  return r === null ? null : C(r, chain(mkSum(ts.slice(0, -1)), base));
+}
+function iotaRPsum(x, mu, E) {
+  const ts = termsOf(x);
+  if (ts.length === 0) return null;
+  if (ts.length === 1) return iotaRP(ts[0], mu, E);
+  const r = expRP(ts[ts.length - 1], mu, E);
+  return r === null ? null : C(r, iota(mkSum(ts.slice(0, -1))));
+}
+function iotaRP(p, mu, E) {
+  if (!isObj(p) || p.nu < mu || p.a === 0) return null;
+  const nu = p.nu, a = p.a;
+  const [high, low] = splitHigh(a, nu);
+  if (high === 0) {
+    if (nu === 0) return null;
+    const ats = termsOf(a);
+    if (nu >= 2 && nuOf(ats[ats.length - 1]) === nu) return null; // N2 の形はなぞらない
+    const r = chainRP2(a, mu, E, omegaHat(nu));
+    return r === null ? null : C(r, omegaHat(nu));
+  }
+  if (low !== 0) {
+    const Pt = iota(D(nu, high));
+    const r = chainRP2(low, mu, E, Pt);
+    return r === null ? null : C(r, Pt);
+  }
+  const hs = termsOf(high);
+  const aprime = mkSum(hs.slice(0, -1));
+  const last = hs[hs.length - 1];
+  if (last.nu === nu + 1) {
+    const [bh] = splitHigh(last.a, last.nu);
+    const r = bh === 0 ? chainRP2(last.a, mu, E, omegaHat(last.nu)) : iotaRPsum(last.a, mu, E);
+    if (r === null) return null;
+    return Cn(r, aprime !== 0 ? iota(D(nu, aprime)) : baseOf(nu));
+  }
+  if (nu === 0) return null;
+  const r = iotaRPsum(a, mu, E);
+  return r === null ? null : C(r, baseOf(nu));
 }
 
 // R2n 用: chainRP の基点を指定できる版（ebp2tc.js と同じ）

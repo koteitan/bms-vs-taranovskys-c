@@ -21,10 +21,10 @@ flowchart LR
   BMS1 -->|"prss<br/>Translate.lean / bms2tc.js / gen_translate_tests.py"| TC
   BMS2 -->|"transPS（naruyoko 氏 common.js Trans の移植）<br/>Buchholz.lean / bms2tc.js"| BT
   BMS2 -.->|"参照実装（BUCHHOLZ_REF_JS）<br/>pss_tc.py / gen_buchholz_tests.py"| BT
-  BT -->|"iota（規則 N2, R2n）<br/>Translate.lean / bms2tc.js / pss_tc.py"| TC
+  BT -->|"iota（規則 N2, R2n, R2g, R1d）<br/>Translate.lean / bms2tc.js / pss_tc.py"| TC
   BMS3 -.->|"原表の作者の手解析<br/>（プログラムなし）"| LABEL
   LABEL -->|"parseLabel（+ fixLabel で誤記補正）<br/>ebpsi.js / ebp2tc.js"| EBP
-  EBP -->|"iota（Ω̂ の超限添字、N2, R2n）<br/>ebp2tc.js"| TC
+  EBP -->|"iota（Ω̂ の超限添字、N2, R2n, R2g, R1d）<br/>ebp2tc.js"| TC
   BT -.->|"添字が有限なら同じ規則"| EBP
   AAA -->|"parseArray<br/>aaa_cmp.js"| TC
 ```

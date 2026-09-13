@@ -154,6 +154,70 @@ def chain_rp(a, nu, e):
     e2 = chain_rp(last[2], nu, e)
     return None if e2 is None else C(e2, init)
 
+def exp_rp(p, mu, E):
+    """R2g: 段 μ の素の Ω_μ への右端の道をたどり、その指数を E にした log p（Translate.lean の expRP と同じ）.
+    道は段 ≥ μ の項だけを通る。置き換えがなければ None."""
+    if p[0] != 'D' or p[1] < mu:
+        return None
+    nu, a = p[1], p[2]
+    if a == 0:
+        return E if nu == mu else None
+    h, l = split_high(a, nu)
+    if h == 0:
+        if nu == 0:
+            return None
+        return chain_rp2(a, mu, E, omega_hat(nu))
+    if l != 0:
+        return chain_rp2(l, mu, E, iota(('D', nu, h)))
+    return iota_rp(p, mu, E)
+
+def chain_rp2(a, mu, E, base_):
+    ts = terms_of(a)
+    if not ts:
+        return None
+    r = exp_rp(ts[-1], mu, E)
+    return None if r is None else C(r, chain(mk_sum(ts[:-1]), base_))
+
+def iota_rp_sum(x, mu, E):
+    ts = terms_of(x)
+    if not ts:
+        return None
+    if len(ts) == 1:
+        return iota_rp(ts[0], mu, E)
+    r = exp_rp(ts[-1], mu, E)
+    return None if r is None else C(r, iota(mk_sum(ts[:-1])))
+
+def iota_rp(p, mu, E):
+    """R2g: ι(p) の計算の形をなぞって置き換える（Translate.lean の iotaRP と同じ）."""
+    if p[0] != 'D' or p[1] < mu or p[2] == 0:
+        return None
+    nu, a = p[1], p[2]
+    high, low = split_high(a, nu)
+    if high == 0:
+        if nu == 0:
+            return None
+        if nu >= 2 and terms_of(a)[-1][1] == nu:
+            return None
+        r = chain_rp2(a, mu, E, omega_hat(nu))
+        return None if r is None else C(r, omega_hat(nu))
+    if low != 0:
+        Pt = iota(('D', nu, high))
+        r = chain_rp2(low, mu, E, Pt)
+        return None if r is None else C(r, Pt)
+    hs = terms_of(high)
+    aprime = mk_sum(hs[:-1])
+    last = hs[-1]
+    if last[1] == nu + 1:
+        bh, _ = split_high(last[2], last[1])
+        r = chain_rp2(last[2], mu, E, omega_hat(last[1])) if bh == 0 else iota_rp_sum(last[2], mu, E)
+        if r is None:
+            return None
+        return Cn(r, iota(('D', nu, aprime)) if aprime != 0 else base(nu))
+    if nu == 0:
+        return None
+    r = iota_rp_sum(a, mu, E)
+    return None if r is None else C(r, base(nu))
+
 def chain_rp_base(a, nu, e, base):
     """chain_rp の基点を指定できる版（Translate.lean の chainRPBase と同じ）."""
     ts = terms_of(a)
@@ -205,6 +269,19 @@ def iota(t):
         # 1 段上の崩壊 ψ_{ν+1}(b) が最後の項: 次数は「Ω_{ν+1} + b」の値項
         bh, _ = split_high(b, nu + 1)
         degree = chain(b, omega_hat(nu + 1)) if bh == 0 else val(b)
+        if nu == 0 and bh != 0:
+            # R1d: b が段 m ≥ 2 の項で終わるとき、ι(b) の中で R2g と同じ置き換え（E = ψ̂_{m-1}(b)）
+            bts = terms_of(b)
+            q2 = bts[-1]
+            if len(bts) >= 2 and q2[1] >= 2:
+                binit = mk_sum(bts[:-1])
+                e2 = iota(('D', q2[1] - 1, b))
+                if q2[2] == 0:
+                    degree = Cn(e2, val(binit))
+                else:
+                    r = exp_rp(q2, q2[1], e2)
+                    if r is not None:
+                        degree = C(r, val(binit))
         base_ = iota(('D', nu, aprime)) if aprime != 0 else base(nu)
         return Cn(degree, base_)
     # 2 段以上上の項が最後: 添字全体の値項を次数にする
@@ -213,15 +290,7 @@ def iota(t):
         en = iota(('D', mu - 1, a))
         if b == 0:
             return C(Cn(en, val(aprime)), Z)
-        bts = terms_of(b)
-        hq = mk_sum([q for q in bts if q[1] > mu])
-        lq = mk_sum([q for q in bts if q[1] <= mu])
-        if hq == 0:
-            ex = chain_rp_base(b, mu, en, omega_hat(mu))
-        elif lq != 0:
-            ex = chain_rp_base(lq, mu, en, iota(('D', mu, hq)))
-        else:
-            ex = None
+        ex = exp_rp(('D', mu, b), mu, en)   # R2g
         if ex is None:
             return C(iota(a), Z)
         return C(C(ex, val(aprime)), Z)

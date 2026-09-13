@@ -31,9 +31,11 @@ Buchholz 項 → TC 項の規則 (tools/pss_tc.py と同一; 機械検査済み�
     a_high = a' ++ [D_μ b], μ ≥ ν+2, ν = 0, a' ≠ 0:                            (R2n)
       E = ψ̂_{μ-1}(a) として
         b = 0                  → C(Cn(E, ι(a')), 0)
-        それ以外               → C(C(ex, ι(a')), 0)、ex = log ψ_μ(b) の「最後の段 μ の項を
-                                 たどった先の指数」を E に置き換えたもの（たどれなければ C(ι(a), 0)）
-      （b = b_high ++ β なら log ψ_μ(b) = chain(β, ι(D_μ b_high))、b_high = 0 なら chain(b, Ω̂_μ)）
+        それ以外               → C(C(ex, ι(a')), 0)、ex = log ψ_μ(b) の中で「段 ≥ μ の項だけを通る
+                                 右端の道」の先にある素の Ω_μ の指数を E に置き換えたもの
+                                 （expRP。log / ι / chain の計算の形をなぞる。道がなければ C(ι(a), 0)）(R2g)
+    a_high = a' ++ [D_1 b], ν = 0, b が添字 ≥ 2 を含み最後の項 q が段 m ≥ 2:              (R1d)
+      上の deg = ι(b) を、E = ψ̂_{m-1}(b) で q について R2g と同じ置き換えをしたものにする
     その他:                        C(ι(a), base_ν)
   base_0 = 0, base_ν = Ω̂_ν.  Cn(x, b) は b = C(c,d), x > c の間 b := d と縮める。
 -/
@@ -145,6 +147,65 @@ mutual
           else (chainRP b nu e).map fun e' => .C e' init
     | _ => none
 
+  /-- R2g: 段 μ の素の Ω_μ への右端の道をたどり、その指数を `e` にした log p。
+  道は段 ≥ μ の項だけを通り、`expT` / `iota` / `chain` の計算の形をなぞる。 -/
+  partial def expRP (p : BT) (mu : Nat) (e : T) : Option T :=
+    match p with
+    | .D nuI a =>
+      if nuI < (mu : Int) then none
+      else if a == .zero then (if nuI == (mu : Int) then some e else none)
+      else
+        let nu := nuI.toNat
+        let (h, l) := splitHigh a nu
+        if h == .zero then
+          if nu == 0 then none else chainRP2 a mu e (omegaHat nu)
+        else if l != .zero then chainRP2 l mu e (iota (.D nuI h))
+        else iotaRP p mu e
+    | _ => none
+
+  /-- chain(a, base) の最後の項について `expRP`。 -/
+  partial def chainRP2 (a : BT) (mu : Nat) (e base : T) : Option T :=
+    let ts := termsOf a
+    match ts.getLast? with
+    | none => none
+    | some last => (expRP last mu e).map fun r => .C r (chain (mkSum ts.dropLast) base)
+
+  /-- ι(x)（和も可）の形をなぞって置き換える。 -/
+  partial def iotaRPsum (x : BT) (mu : Nat) (e : T) : Option T :=
+    match termsOf x with
+    | [] => none
+    | [p] => iotaRP p mu e
+    | ts => (expRP ts.getLast! mu e).map fun r => .C r (iota (mkSum ts.dropLast))
+
+  /-- ι(p)（主項）の形をなぞって置き換える。N2 の形と R2 の形はなぞらない。 -/
+  partial def iotaRP (p : BT) (mu : Nat) (e : T) : Option T :=
+    match p with
+    | .D nuI a =>
+      if nuI < (mu : Int) || a == .zero then none
+      else
+        let nu := nuI.toNat
+        let (high, low) := splitHigh a nu
+        if high == .zero then
+          if nu == 0 then none
+          else if nu ≥ 2 && ((termsOf a).getLast?.map nuOf) == some (nu : Int) then none
+          else (chainRP2 a mu e (omegaHat nu)).map fun r => .C r (omegaHat nu)
+        else if low != .zero then
+          let pt := iota (.D nuI high)
+          (chainRP2 low mu e pt).map fun r => .C r pt
+        else
+          let hs := termsOf high
+          let aprime := mkSum hs.dropLast
+          match hs.getLast? with
+          | some (.D lastI c) =>
+            if lastI == nuI + 1 then
+              let (bh, _) := splitHigh c lastI.toNat
+              let r := if bh == .zero then chainRP2 c mu e (omegaHat lastI.toNat) else iotaRPsum c mu e
+              r.map fun r => Cn r (if aprime != .zero then iota (.D nuI aprime) else baseOf nu)
+            else if nu == 0 then none
+            else (iotaRPsum a mu e).map fun r => .C r (baseOf nu)
+          | _ => none
+    | _ => none
+
   /-- `chainRP` の基点を指定できる版: chain(a, base) の最後の段 ν の項をたどった先の
   ψ_ν(0) の指数を `e` に置き換える（途中の ψ_ν(c) の中では基点 Ω̂_ν）。 -/
   partial def chainRPBase (a : BT) (nu : Nat) (e base : T) : Option T :=
@@ -193,7 +254,21 @@ mutual
             let mu := muI.toNat
             if mu == nu + 1 then
               let (bh, _) := splitHigh b (nu + 1)
-              let degree := if bh == .zero then chain b (omegaHat (nu + 1)) else iota b
+              let degree0 := if bh == .zero then chain b (omegaHat (nu + 1)) else iota b
+              -- R1d: ψ_0(α' + ψ_1(b)) で b が段 m ≥ 2 の項で終わるとき、ι(b) の中で R2g と同じ置き換え
+              let bts := termsOf b
+              let degree : T :=
+                match bts.getLast? with
+                | some (.D m2I c2) =>
+                  if nu == 0 && bh != .zero && bts.length ≥ 2 && m2I ≥ 2 then
+                    let binit := mkSum bts.dropLast
+                    let e2 := iota (.D (m2I - 1) b)
+                    if c2 == .zero then Cn e2 (iota binit)
+                    else match expRP (.D m2I c2) m2I.toNat e2 with
+                      | some r => .C r (iota binit)
+                      | none => degree0
+                  else degree0
+                | _ => degree0
               let base := if aprime != .zero then iota (.D nuI aprime) else baseOf nu
               Cn degree base
             else if nu == 0 && aprime != .zero then
@@ -201,12 +276,7 @@ mutual
               let en := iota (.D ((mu : Int) - 1) a)
               if b == .zero then .C (Cn en (iota aprime)) .zero
               else
-                let (hq, lq) := splitHigh b mu
-                let ex : Option T :=
-                  if hq == .zero then chainRPBase b mu en (omegaHat mu)
-                  else if lq != .zero then chainRPBase lq mu en (iota (.D (mu : Int) hq))
-                  else none
-                match ex with
+                match expRP (.D muI b) mu en with
                 | some e => .C (.C e (iota aprime)) .zero
                 | none => .C (iota a) .zero
             else
