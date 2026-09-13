@@ -32,8 +32,9 @@ const off = args.includes('--off');
 for (const f of args.filter(a => a.startsWith('+'))) X.RULES[f.slice(1)] = true;
 const [from, to] = args.filter(a => !a.startsWith('--') && !a.startsWith('+')).map(Number);
 const S = makeSigma({
-  levels: args.includes('--k2') ? [1, 2] : [1],
+  levels: args.includes('--auto') ? 'auto' : args.includes('--k2') ? [1, 2] : [1],
   low: args.includes('--low'),
+  normAll: args.includes('--normall'),
   eorig: args.includes('--eorig'),
   r2nu: false,   // R2nu は +R2nu で RULES に直接入れる
 });
