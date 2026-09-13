@@ -41,13 +41,34 @@ document.addEventListener('click', e => {
   }
 });
 
+// ---- 3 行: シートの行の対応表（sheet/tss_web.json）を必要になったら読み込む
+let tssMap = null, tssState = 'none';   // none | loading | ready | failed
+function loadTss() {
+  if (tssState !== 'none') return;
+  tssState = 'loading';
+  fetch('sheet/tss_web.json')
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(j => { tssMap = j; tssState = 'ready'; convert(); })
+    .catch(() => { tssState = 'failed'; convert(); });
+}
+function toOmega(t) {
+  return t.replace(/W_(\d+)/g, 'Ω_$1').replace(/W(?!_)/g, 'Ω_1');
+}
+
 // ---- 変換
 function convert() {
   const lines = bmsEl.value.split('\n');
   const out = lines.map(line => {
     if (line.trim() === '') return '';
     const r = Bms2tc.translate(line, { omega: optOmega.checked });
-    return r.tc !== null ? r.tc : r.error;
+    if (r.tc !== null) return r.tc;
+    if (r.rows === 3) {
+      if (tssState === 'none' || tssState === 'loading') { loadTss(); return '(loading table…)'; }
+      const e = tssMap && tssMap[r.bms];
+      if (e) return (optOmega.checked ? toOmega(e[0]) : e[0]) + (e[1] ? '  ⚠ flagged' : '');
+      return '3 行: シートの ψ(I) までの行のみ対応 (3 rows: only rows of the sheet up to ψ(I))';
+    }
+    return r.error;
   });
   tcEl.value = out.join('\n');
 }

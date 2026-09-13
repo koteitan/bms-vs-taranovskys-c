@@ -11,6 +11,8 @@ and Taranovsky's ordinal notation C (main system, combined).
 ## Layout
 
 - `index.html`, `main.js`, `style.css`, `bms2tc.js` — browser converter (`bms2tc.js` is a JS port with the same rules as the Lean code)
+- `ebpsi.js` — extended Buchholz ψ (subscripts are terms): normal form, order, fundamental sequences, + × ^, parser for the sheet's UNOCF labels
+- `ebp2tc.js` — extended Buchholz ψ → C (the ι of `bms2tc.js` extended to transfinite subscripts)
 - `lean/` — Lean 4 (no Mathlib)
   - `BmsTc/TC.lean` — terms, comparison, standard-form check and fundamental sequences (expand) of Taranovsky's C
   - `BmsTc/Bms.lean` — BM4 expansion, comparison, standard-form check (port of yaBMS `bms.c`)
@@ -57,10 +59,14 @@ BM4. `M[n]` follows the yaBMS convention (append n copies of the bad part; `M[0]
 - 1 row (primitive sequence): read as a forest and map into the 0-th system with `C(a,b) = b + ω^a`.
 - 2 rows (pair sequence): map to Buchholz's notation (0, D_ν, +) by p進大好きbot's map,
   then to C by the rules ι at the top of `Translate.lean`,
-  with Ω̂_1 = Ω_1, Ω̂_{ν+1} = C(Ω_2, Ω̂_ν) as the base of D_ν.
-- 3 rows and more: not supported.
+  with Ω̂_1 = Ω_1, Ω̂_{ν+1} = C(Ω_2, Ω̂_ν) as the base of D_ν. For ν ≥ 2, when the last term of the argument
+  has the same level ν, rule N2 replaces its exponent by ψ̂_{ν-1}(Ω_ν + a).
+- 3 rows (rows of the BM4-Analysis sheet up to ψ(I)): not translated from the matrix directly; the sheet's UNOCF
+  label is read as an extended Buchholz ψ term and mapped to C by `ebp2tc.js`, with transfinite subscripts
+  Ω̂_{γ+ω^{1+x}} = C(C(ι(x), Ω_2), Ω̂_γ) (matching landmarks such as ψ_0(Ω_ω) = C(C(C(0,Ω_2),0),0)).
+- 4 rows and more: not supported.
 
-Range: below (0,0,0)(1,1,1).
+Range: 1 and 2 rows, plus the 3-row rows present in the sheet (up to ψ(I)).
 
 ## Usage
 
@@ -86,9 +92,20 @@ The browser version needs no build: open `index.html`. The input is mirrored to 
 - `tools/check_js.js`: 705 cases `bms2tc.js` vs the Lean CLI (0 mismatches).
 - `tools/pss_tc.py`: machine check of the translation: f(M) standard, order preserved,
   f(M[n]) < f(M) (n ≤ 12) and f(M)[k] ≤ f(M[12]) (k ≤ 6). Results in `sheet/verify_bad.json`.
+- `tools/rule_lab.js`: lab for the 2-row rules. At each limit M it compares f(M) with the sup search
+  `supseq(f(M[4]), f(M[5]), f(M[6]))` (the exact sup of an increasing sequence inside C).
+- `tools/ebp_lab.js`: checks extended Buchholz ψ → C: ι(α) = supseq ι(α[4..6]) over the ψ-side fundamental
+  sequence, ι(α[n]) < ι(α), standard form, and order against the neighbouring sheet row. Results in `sheet/tss_bad.json`.
+- `tools/aaa_cmp.js`: comparison with a volunteer's (AAA) table of extended Buchholz ψ vs C (59 of 65 entries agree;
+  the 6 disagreements are all of the form ψ_0(ψ_2(x)), where this repository's values agree with the sup search).
 - `tools/make_sheet.py`: generates the correspondence table.
+
+Correctness criterion: if f(α) = sup f(α[n]) at every limit α, then f is an order isomorphism onto an initial
+segment, hence unique. The checks above test this property on finitely many α; they are not a proof.
 
 ## Status
 
-See the summary in `sheet/README-en.md`. 8 two-row matrices (e.g. (0,0)(1,1)(2,2)(3,3)(3,3): two or more
-Ω_2-level terms stacked) fail the machine check; their rule is not settled. 3 rows and more are untranslated.
+See the summary in `sheet/README-en.md`.
+
+- 2 rows: the remaining failures are of the form ψ_0(Ω_3 + ψ_2(Ω_3 + β)) (e.g. (0,0)(1,1)(2,2)(3,3)(3,2)), where rule R2 collapses the wrong way.
+- 3 rows: 4483 rows via the sheet's labels; about 2000 pass the checks, the rest are flagged, mostly for the same form (last term at level 2 or higher).
